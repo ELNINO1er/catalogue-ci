@@ -1,5 +1,30 @@
-const { Product, Business } = require("../models");
+const { Op } = require("sequelize");
+const { Product, Business, Subscription, Plan } = require("../models");
 const { canAccessBusiness } = require("../middleware/ownership");
+
+async function ensureProductLimitIsAvailable(businessId) {
+  const subscription = await Subscription.findOne({
+    where: {
+      business_id: businessId,
+      status: { [Op.in]: ["ACTIVE", "TRIAL"] },
+    },
+    include: [{ model: Plan, as: "plan" }],
+    order: [["created_at", "DESC"]],
+  });
+
+  const productLimit = subscription?.plan?.product_limit;
+  if (!productLimit) return;
+
+  const activeProducts = await Product.count({
+    where: { business_id: businessId, is_active: true },
+  });
+
+  if (activeProducts >= Number(productLimit)) {
+    const error = new Error(`Limite du plan atteinte: ${productLimit} produit(s) autorise(s).`);
+    error.status = 403;
+    throw error;
+  }
+}
 
 exports.listByBusiness = async (req, res, next) => {
   try {
@@ -27,11 +52,16 @@ exports.create = async (req, res, next) => {
 
     const business = await Business.findByPk(businessId);
     if (!business) return res.status(404).json({ message: "Commerce introuvable." });
+    if (!business.is_active) {
+      return res.status(403).json({ success: false, message: "Ce commerce est suspendu." });
+    }
 
     const { name, image_url, price, description, category, is_available } = req.body;
     if (!name || price === undefined) {
       return res.status(400).json({ message: "Nom et prix obligatoires." });
     }
+
+    await ensureProductLimitIsAvailable(businessId);
 
     const product = await Product.create({
       business_id: businessId,

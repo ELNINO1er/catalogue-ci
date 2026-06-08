@@ -9,6 +9,7 @@ const Business = sequelize.define(
     logo_url: { type: DataTypes.STRING(500) },
     description: { type: DataTypes.TEXT },
     category_id: { type: DataTypes.INTEGER, allowNull: true },
+    template_id: { type: DataTypes.INTEGER, allowNull: true },
     whatsapp_number: { type: DataTypes.STRING(20), allowNull: false },
     phone_number: { type: DataTypes.STRING(20) },
     address: { type: DataTypes.STRING(255) },

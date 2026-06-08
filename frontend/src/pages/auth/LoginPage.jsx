@@ -52,7 +52,7 @@ export default function LoginPage({ onLogin }) {
 
         {error ? <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div> : null}
 
-        <Button className="w-full" disabled={loading}>
+        <Button type="submit" className="w-full" disabled={loading}>
           {loading ? <RefreshCw size={16} className="animate-spin" /> : <LogOut size={16} />}
           Se connecter
         </Button>

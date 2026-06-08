@@ -101,7 +101,7 @@ export default function PublicCataloguePage({ slug, onBack, setQrBusiness }) {
       </div>
 
       {checkoutProduct ? (
-        <CheckoutModal business={business} product={checkoutProduct} onClose={() => setCheckoutProduct(null)} />
+        <CheckoutModal business={business} product={checkoutProduct} slug={slug} onClose={() => setCheckoutProduct(null)} />
       ) : null}
     </main>
   );

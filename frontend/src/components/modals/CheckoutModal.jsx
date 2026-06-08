@@ -1,45 +1,124 @@
 import { useState } from "react";
-import { MessageCircle, Minus, Plus } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import Button from "../ui/Button";
+import { createPublicOrder, markPaymentSent } from "../../services/orderService";
 import { fmt } from "../../utils/formatters";
-import { orderOnWhatsApp } from "../../utils/whatsapp";
+import { buildOrderWhatsAppMessage } from "../../utils/whatsappMessage";
 
-export default function CheckoutModal({ business, product, onClose }) {
-  const [quantity, setQuantity] = useState(1);
-  const [customer, setCustomer] = useState({ name: "", phone: "", address: "" });
-  const [fulfillment, setFulfillment] = useState("delivery");
-  const [paymentCode, setPaymentCode] = useState(business.paymentMethods?.[0]?.code || "");
-  const unitPrice = Number(product.price || 0);
-  const total = unitPrice * quantity;
-  const payment = business.paymentMethods.find((method) => method.code === paymentCode);
+function parseOptions(optionsJson) {
+  if (!optionsJson) return [];
+  try {
+    return JSON.parse(optionsJson);
+  } catch {
+    return [];
+  }
+}
 
-  function updateCustomer(field, value) {
-    setCustomer((current) => ({ ...current, [field]: value }));
+function FieldInput({ field, value, onChange }) {
+  const baseClass = "w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-emerald-500";
+  const options = parseOptions(field.options_json);
+
+  if (field.field_type === "textarea" || field.field_type === "address") {
+    return <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={2} className={`${baseClass} resize-none`} />;
   }
 
-  async function confirmOrder() {
-    const details = [
-      `Produit: ${product.name}`,
-      `Quantite: ${quantity}`,
-      `Total: ${fmt(total)} FCFA`,
-      `Paiement: ${payment?.name || "A confirmer"}`,
-      `Mode: ${fulfillment === "delivery" ? "Livraison" : "Retrait sur place"}`,
-      customer.name ? `Client: ${customer.name}` : null,
-      customer.phone ? `Telephone: ${customer.phone}` : null,
-      fulfillment === "delivery" && customer.address ? `Adresse: ${customer.address}` : null,
-    ].filter(Boolean);
-
-    await orderOnWhatsApp({
-      business,
-      product: {
-        ...product,
-        price: total,
-        name: `${product.name} x${quantity}`,
-        checkoutMessage: details.join(" | "),
-      },
-    });
-    onClose();
+  if (["select", "radio"].includes(field.field_type)) {
+    return (
+      <select value={value} onChange={(event) => onChange(event.target.value)} className={baseClass}>
+        <option value="">Choisir</option>
+        {options.map((option) => <option key={option} value={option}>{option}</option>)}
+      </select>
+    );
   }
+
+  if (field.field_type === "checkbox") {
+    return (
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => {
+          const current = value ? String(value).split(",").map((item) => item.trim()) : [];
+          const checked = current.includes(option);
+          return (
+            <label key={option} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm">
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={(event) => {
+                  const next = event.target.checked
+                    ? [...current, option]
+                    : current.filter((item) => item !== option);
+                  onChange(next.join(", "));
+                }}
+                className="h-4 w-4 accent-emerald-600"
+              />
+              {option}
+            </label>
+          );
+        })}
+      </div>
+    );
+  }
+
+  const typeMap = {
+    number: "number",
+    phone: "tel",
+    email: "email",
+    date: "date",
+    time: "time",
+    file: "text",
+  };
+
+  return (
+    <input
+      type={typeMap[field.field_type] || "text"}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className={baseClass}
+      placeholder={field.field_type === "file" ? "Lien du fichier ou reference" : ""}
+    />
+  );
+}
+
+export default function CheckoutModal({ business, product, slug, onClose }) {
+  const [customer, setCustomer] = useState({ name: "", phone: "", email: "" });
+  const [fieldValues, setFieldValues] = useState({});
+  const [paymentMethod, setPaymentMethod] = useState(business.paymentSettings?.is_wave_enabled ? "wave" : "whatsapp");
+  const [createdOrder, setCreatedOrder] = useState(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const fields = product.customFields || [];
+  const settings = business.paymentSettings || {};
+
+  function updateField(fieldId, value) {
+    setFieldValues((current) => ({ ...current, [fieldId]: value }));
+  }
+
+  async function submitOrder(event) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const data = await createPublicOrder(slug, {
+        product_id: product.id,
+        customer_name: customer.name,
+        customer_phone: customer.phone,
+        customer_email: customer.email || null,
+        payment_method: paymentMethod,
+        field_values: fieldValues,
+      });
+      setCreatedOrder(data.order);
+    } catch (err) {
+      setError(err.response?.data?.message || "Creation de commande impossible.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function confirmPaymentSent() {
+    const data = await markPaymentSent(createdOrder.id);
+    setCreatedOrder(data.order);
+  }
+
+  const whatsappLink = createdOrder ? buildOrderWhatsAppMessage({ business, order: createdOrder }) : "#";
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4" onClick={onClose}>
@@ -47,87 +126,89 @@ export default function CheckoutModal({ business, product, onClose }) {
         <div className="border-b border-slate-200 p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold text-emerald-700">Paiement et commande</p>
+              <p className="text-sm font-semibold text-emerald-700">Commande</p>
               <h2 className="mt-1 text-xl font-bold text-slate-900">{product.name}</h2>
-              <p className="mt-1 text-sm text-slate-500">{business.name}</p>
+              <p className="mt-1 font-bold text-emerald-700">{fmt(product.price)} FCFA</p>
             </div>
             <Button tone="ghost" onClick={onClose}>Fermer</Button>
           </div>
         </div>
 
-        <div className="space-y-5 p-5">
-          <section className="rounded-lg border border-slate-200 p-4">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm text-slate-500">Prix unitaire</p>
-                <p className="font-bold text-slate-900">{fmt(unitPrice)} FCFA</p>
+        {!createdOrder ? (
+          <form onSubmit={submitOrder} className="space-y-5 p-5">
+            <section>
+              <h3 className="mb-3 font-bold text-slate-900">Client</h3>
+              <div className="grid gap-3">
+                <input value={customer.name} onChange={(event) => setCustomer({ ...customer, name: event.target.value })} placeholder="Nom" className="rounded-lg border border-slate-300 px-3 py-2" />
+                <input value={customer.phone} onChange={(event) => setCustomer({ ...customer, phone: event.target.value })} placeholder="Telephone" className="rounded-lg border border-slate-300 px-3 py-2" />
+                <input value={customer.email} onChange={(event) => setCustomer({ ...customer, email: event.target.value })} placeholder="Email optionnel" className="rounded-lg border border-slate-300 px-3 py-2" />
               </div>
-              <div className="flex items-center gap-2">
-                <Button tone="secondary" disabled={quantity <= 1} onClick={() => setQuantity(quantity - 1)}>
-                  <Minus size={16} />
-                </Button>
-                <span className="grid h-10 w-12 place-items-center rounded-lg border border-slate-200 font-bold">{quantity}</span>
-                <Button tone="secondary" onClick={() => setQuantity(quantity + 1)}>
-                  <Plus size={16} />
-                </Button>
+            </section>
+
+            {fields.length ? (
+              <section>
+                <h3 className="mb-3 font-bold text-slate-900">Details</h3>
+                <div className="grid gap-3">
+                  {fields.map((field) => (
+                    <label key={field.id} className="grid gap-1 text-sm font-semibold text-slate-700">
+                      {field.label} {field.is_required ? <span className="text-rose-600">*</span> : null}
+                      <FieldInput field={field} value={fieldValues[field.id] || ""} onChange={(value) => updateField(field.id, value)} />
+                    </label>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            <section>
+              <h3 className="mb-3 font-bold text-slate-900">Paiement</h3>
+              <div className="grid gap-2">
+                {settings.is_wave_enabled ? (
+                  <label className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-3">
+                    <span className="font-semibold">Payer avec Wave</span>
+                    <input type="radio" checked={paymentMethod === "wave"} onChange={() => setPaymentMethod("wave")} className="h-4 w-4 accent-emerald-600" />
+                  </label>
+                ) : null}
+                {settings.is_whatsapp_enabled !== false ? (
+                  <label className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-3">
+                    <span className="font-semibold">Contacter sur WhatsApp</span>
+                    <input type="radio" checked={paymentMethod === "whatsapp"} onChange={() => setPaymentMethod("whatsapp")} className="h-4 w-4 accent-emerald-600" />
+                  </label>
+                ) : null}
               </div>
-            </div>
-          </section>
+            </section>
 
-          <section>
-            <h3 className="mb-3 font-bold text-slate-900">Mode de reception</h3>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <button onClick={() => setFulfillment("delivery")} className={`rounded-lg border px-3 py-3 text-left text-sm font-semibold ${fulfillment === "delivery" ? "border-emerald-500 bg-emerald-50 text-emerald-800" : "border-slate-200 text-slate-700"}`}>
-                Livraison
-              </button>
-              <button onClick={() => setFulfillment("pickup")} className={`rounded-lg border px-3 py-3 text-left text-sm font-semibold ${fulfillment === "pickup" ? "border-emerald-500 bg-emerald-50 text-emerald-800" : "border-slate-200 text-slate-700"}`}>
-                Retrait sur place
-              </button>
-            </div>
-          </section>
+            {error ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
 
-          <section>
-            <h3 className="mb-3 font-bold text-slate-900">Paiement</h3>
-            <div className="grid gap-2">
-              {business.paymentMethods.map((method) => (
-                <label key={method.id} className={`flex cursor-pointer items-center justify-between rounded-lg border px-3 py-3 ${paymentCode === method.code ? "border-emerald-500 bg-emerald-50" : "border-slate-200"}`}>
-                  <span className="font-semibold text-slate-800">{method.name}</span>
-                  <input type="radio" name="payment" checked={paymentCode === method.code} onChange={() => setPaymentCode(method.code)} className="h-4 w-4 accent-emerald-600" />
-                </label>
-              ))}
+            <Button type="submit" className="w-full py-3" disabled={loading}>
+              Creer la commande
+            </Button>
+          </form>
+        ) : (
+          <div className="space-y-4 p-5">
+            <div className="rounded-lg bg-emerald-50 p-4">
+              <p className="font-bold text-emerald-900">Commande #{createdOrder.id} creee</p>
+              <p className="text-sm text-emerald-800">Montant exact : {fmt(createdOrder.total_amount)} FCFA</p>
             </div>
-            <p className="mt-2 text-xs text-slate-500">
-              Le commercant confirme les instructions exactes de paiement dans WhatsApp.
-            </p>
-          </section>
 
-          <section>
-            <h3 className="mb-3 font-bold text-slate-900">Vos informations</h3>
-            <div className="grid gap-3">
-              <input value={customer.name} onChange={(event) => updateCustomer("name", event.target.value)} placeholder="Nom" className="rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-emerald-500" />
-              <input value={customer.phone} onChange={(event) => updateCustomer("phone", event.target.value)} placeholder="Telephone" className="rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-emerald-500" />
-              {fulfillment === "delivery" ? (
-                <textarea value={customer.address} onChange={(event) => updateCustomer("address", event.target.value)} placeholder="Adresse de livraison" rows={2} className="resize-none rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-emerald-500" />
-              ) : null}
-            </div>
-          </section>
+            {settings.is_wave_enabled ? (
+              <div className="rounded-lg border border-slate-200 p-4">
+                <p className="font-bold text-slate-900">Payer avec Wave</p>
+                <p className="mt-1 text-sm text-slate-600">Numero Wave : <strong>{settings.wave_phone_number || "A renseigner"}</strong></p>
+                <p className="text-sm text-slate-600">Montant : <strong>{fmt(createdOrder.total_amount)} FCFA</strong></p>
+                <Button className="mt-3" onClick={confirmPaymentSent}>J'ai paye</Button>
+              </div>
+            ) : null}
 
-          <section className="rounded-lg bg-slate-100 p-4">
-            <div className="flex items-center justify-between text-sm text-slate-600">
-              <span>Sous-total</span>
-              <span>{fmt(total)} FCFA</span>
-            </div>
-            <div className="mt-2 flex items-center justify-between text-lg font-bold text-slate-900">
-              <span>Total a payer</span>
-              <span>{fmt(total)} FCFA</span>
-            </div>
-          </section>
-
-          <Button className="w-full py-3" onClick={confirmOrder} disabled={!paymentCode}>
-            <MessageCircle size={18} />
-            Valider et envoyer sur WhatsApp
-          </Button>
-        </div>
+            {settings.is_whatsapp_enabled !== false ? (
+              <a href={whatsappLink} target="_blank" rel="noreferrer">
+                <Button className="w-full">
+                  <MessageCircle size={18} />
+                  Contacter sur WhatsApp
+                </Button>
+              </a>
+            ) : null}
+          </div>
+        )}
       </div>
     </div>
   );

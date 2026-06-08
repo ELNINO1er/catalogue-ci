@@ -10,6 +10,10 @@ const productRoutes = require("./routes/productRoutes");
 const merchantRoutes = require("./routes/merchantRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const trackingRoutes = require("./routes/trackingRoutes");
+const customFieldRoutes = require("./routes/customFieldRoutes");
+const orderRoutes = require("./routes/orderRoutes");
+const paymentSettingsRoutes = require("./routes/paymentSettingsRoutes");
+const superAdminRoutes = require("./routes/superAdminRoutes");
 
 if (!process.env.JWT_SECRET) {
   console.error("Configuration invalide : JWT_SECRET est obligatoire.");
@@ -51,17 +55,30 @@ app.use("/api", productRoutes);
 app.use("/api/merchants", merchantRoutes);
 app.use("/api/payment-methods", paymentRoutes);
 app.use("/api", trackingRoutes);
+app.use("/api", customFieldRoutes);
+app.use("/api", orderRoutes);
+app.use("/api", paymentSettingsRoutes);
+app.use("/api/super-admin", superAdminRoutes);
 
 app.use((req, res) => res.status(404).json({ success: false, message: "Route introuvable." }));
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 4000;
 
+async function ensureBusinessTemplateColumn() {
+  const [columns] = await sequelize.query("SHOW COLUMNS FROM `businesses` LIKE 'template_id'");
+  if (columns.length) return;
+
+  await sequelize.query("ALTER TABLE `businesses` ADD COLUMN `template_id` INT NULL AFTER `category_id`");
+  console.log("Colonne businesses.template_id ajoutee.");
+}
+
 (async () => {
   try {
     await sequelize.authenticate();
     console.log("Connexion MySQL reussie.");
-    await sequelize.sync({ alter: process.env.NODE_ENV === "development" });
+    await sequelize.sync(process.env.DB_SYNC_ALTER === "true" ? { alter: true } : {});
+    await ensureBusinessTemplateColumn();
     console.log("Modeles synchronises.");
     app.listen(PORT, () => console.log(`API sur http://localhost:${PORT}`));
   } catch (err) {

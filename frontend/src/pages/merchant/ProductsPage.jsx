@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import Button from "../../components/ui/Button";
+import CustomFieldsEditor from "../../components/common/CustomFieldsEditor";
 import { me } from "../../services/authService";
 import { createProduct, deleteProduct, listProductsByBusiness } from "../../services/productService";
 import { fmt } from "../../utils/formatters";
@@ -66,7 +67,7 @@ export default function ProductsPage({ user }) {
           placeholder="Description"
           className="rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-emerald-500"
         />
-        <Button>
+        <Button type="submit">
           <Plus size={16} />
           Ajouter
         </Button>
@@ -84,6 +85,7 @@ export default function ProductsPage({ user }) {
               </Button>
             </div>
             <p className="mt-3 font-bold text-emerald-700">{fmt(product.price)} FCFA</p>
+            <CustomFieldsEditor product={product} />
           </div>
         ))}
       </div>
