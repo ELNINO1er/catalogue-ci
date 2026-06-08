@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+*.log
+server.log
+server.err.log
+vite.log
+vite.err.log
+
+backend/node_modules/
+backend/.env
+backend/*.log
+
+frontend/node_modules/
+frontend/.env
+frontend/dist/
