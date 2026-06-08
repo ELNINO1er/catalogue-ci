@@ -4,6 +4,7 @@ const requireRole = require("../middleware/role");
 const ctrl = require("../controllers/businessController");
 const paymentCtrl = require("../controllers/paymentController");
 const trackingCtrl = require("../controllers/trackingController");
+const { requireBusinessAccess } = require("../middleware/ownership");
 
 router.get("/", auth, requireRole("SUPER_ADMIN"), ctrl.list);
 router.post("/", auth, requireRole("SUPER_ADMIN"), ctrl.create);
@@ -12,6 +13,6 @@ router.put("/:id", auth, requireRole("SUPER_ADMIN"), ctrl.update);
 router.delete("/:id", auth, requireRole("SUPER_ADMIN"), ctrl.remove);
 
 router.post("/:businessId/payment-methods", auth, requireRole("SUPER_ADMIN"), paymentCtrl.setForBusiness);
-router.get("/:businessId/stats", auth, trackingCtrl.businessStats);
+router.get("/:businessId/stats", auth, requireBusinessAccess, trackingCtrl.businessStats);
 
 module.exports = router;

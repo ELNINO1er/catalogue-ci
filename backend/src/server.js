@@ -11,6 +11,19 @@ const merchantRoutes = require("./routes/merchantRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const trackingRoutes = require("./routes/trackingRoutes");
 
+if (!process.env.JWT_SECRET) {
+  console.error("Configuration invalide : JWT_SECRET est obligatoire.");
+  process.exit(1);
+}
+
+if (
+  process.env.NODE_ENV === "production" &&
+  process.env.JWT_SECRET.length < 32
+) {
+  console.error("Configuration invalide : JWT_SECRET doit contenir au moins 32 caracteres en production.");
+  process.exit(1);
+}
+
 const app = express();
 
 const allowedOrigins = new Set([
@@ -39,7 +52,7 @@ app.use("/api/merchants", merchantRoutes);
 app.use("/api/payment-methods", paymentRoutes);
 app.use("/api", trackingRoutes);
 
-app.use((req, res) => res.status(404).json({ message: "Route introuvable." }));
+app.use((req, res) => res.status(404).json({ success: false, message: "Route introuvable." }));
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 4000;

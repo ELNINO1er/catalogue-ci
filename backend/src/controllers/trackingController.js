@@ -8,23 +8,76 @@ function getClientIp(req) {
   return req.socket?.remoteAddress || null;
 }
 
+function isPositiveInteger(value) {
+  return Number.isInteger(Number(value)) && Number(value) > 0;
+}
+
 exports.whatsappClick = async (req, res, next) => {
   try {
     const { business_id, product_id, customer_message } = req.body;
-    if (!business_id) return res.status(400).json({ message: "business_id requis." });
+
+    if (!isPositiveInteger(business_id)) {
+      return res.status(400).json({
+        success: false,
+        message: "business_id doit etre un entier positif.",
+      });
+    }
+
+    if (product_id !== undefined && product_id !== null && product_id !== "" && !isPositiveInteger(product_id)) {
+      return res.status(400).json({
+        success: false,
+        message: "product_id doit etre un entier positif.",
+      });
+    }
+
+    if (customer_message !== undefined && typeof customer_message !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "customer_message doit etre une chaine de caracteres.",
+      });
+    }
 
     const business = await Business.findByPk(business_id);
-    if (!business) return res.status(404).json({ message: "Commerce introuvable." });
+    if (!business || !business.is_active) {
+      return res.status(404).json({
+        success: false,
+        message: "Commerce introuvable.",
+      });
+    }
+
+    let trackedProductId = null;
+    if (product_id) {
+      const product = await Product.findOne({
+        where: {
+          id: Number(product_id),
+          business_id: Number(business_id),
+          is_active: true,
+        },
+      });
+
+      if (!product) {
+        return res.status(400).json({
+          success: false,
+          message: "Le produit ne correspond pas a ce commerce.",
+        });
+      }
+
+      trackedProductId = product.id;
+    }
+
+    const safeMessage = customer_message
+      ? customer_message.trim().slice(0, 1000)
+      : null;
 
     await OrderTracking.create({
-      business_id,
-      product_id: product_id || null,
-      customer_message: customer_message ? String(customer_message).slice(0, 1000) : null,
+      business_id: Number(business_id),
+      product_id: trackedProductId,
+      customer_message: safeMessage,
       ip_address: getClientIp(req),
       user_agent: (req.headers["user-agent"] || "").slice(0, 255),
     });
 
-    return res.status(201).json({ ok: true });
+    return res.status(201).json({ success: true, message: "Clic WhatsApp enregistre." });
   } catch (err) {
     next(err);
   }

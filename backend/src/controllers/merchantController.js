@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const { Op } = require("sequelize");
 const { User, Business } = require("../models");
+const { validatePasswordStrength } = require("../utils/passwordPolicy");
 
 exports.list = async (req, res, next) => {
   try {
@@ -21,6 +22,11 @@ exports.create = async (req, res, next) => {
     const { name, email, password, business_id } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ message: "Nom, email et mot de passe obligatoires." });
+    }
+
+    const passwordError = validatePasswordStrength(password);
+    if (passwordError) {
+      return res.status(400).json({ success: false, message: passwordError });
     }
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -73,7 +79,13 @@ exports.update = async (req, res, next) => {
     }
 
     if (name) user.name = name;
-    if (password) user.password_hash = await bcrypt.hash(password, 10);
+    if (password) {
+      const passwordError = validatePasswordStrength(password);
+      if (passwordError) {
+        return res.status(400).json({ success: false, message: passwordError });
+      }
+      user.password_hash = await bcrypt.hash(password, 10);
+    }
 
     await user.save();
     const { password_hash, ...safe } = user.toJSON();

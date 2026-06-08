@@ -7,7 +7,7 @@ function canAccessBusiness(user, businessId) {
 function requireBusinessAccess(req, res, next) {
   const businessId = req.params.businessId || req.body.business_id;
   if (!canAccessBusiness(req.user, businessId)) {
-    return res.status(403).json({ message: "Acces refuse a ce commerce." });
+    return res.status(403).json({ success: false, message: "Acces refuse a ce commerce." });
   }
   next();
 }
