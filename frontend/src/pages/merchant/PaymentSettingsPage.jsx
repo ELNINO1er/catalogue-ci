@@ -48,6 +48,9 @@ export default function PaymentSettingsPage({ user }) {
       </div>
       <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm">
         <p><strong>Numero Wave :</strong> {form.wave_phone_number || "Non renseigne"}</p>
+        <p className="mt-2 text-slate-500">
+          Ce numero est affiche au client apres commande. Les paiements Wave de vos articles doivent etre envoyes sur ce compte.
+        </p>
         <p><strong>Wave manuel :</strong> {form.is_wave_enabled ? "Actif" : "Inactif"}</p>
         <p><strong>WhatsApp :</strong> {form.is_whatsapp_enabled ? "Actif" : "Inactif"}</p>
       </div>
@@ -63,6 +66,7 @@ export default function PaymentSettingsPage({ user }) {
                 className="w-full rounded-lg border border-slate-300 px-3 py-2"
                 placeholder="Ex: 0700000000"
               />
+              <p className="mt-1 text-xs text-slate-500">Le client verra ce numero pour payer ses commandes avec Wave manuel.</p>
             </div>
             <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
               <input type="checkbox" checked={form.is_wave_enabled} onChange={(event) => setForm({ ...form, is_wave_enabled: event.target.checked })} className="h-4 w-4 accent-emerald-600" />

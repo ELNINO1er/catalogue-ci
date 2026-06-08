@@ -5,7 +5,9 @@ import {
   Grid2X2,
   Layers,
   LogOut,
+  MessageCircle,
   Package,
+  QrCode,
   Receipt,
   ScrollText,
   Settings,
@@ -53,12 +55,27 @@ const adminSections = [
 
 const merchantSections = [
   {
-    title: "Boutique",
+    title: "Vendre",
     links: [
       { key: "dashboard", label: "Dashboard", icon: BarChart3 },
-      { key: "products", label: "Produits", icon: Package },
+      { key: "store-profile", label: "Ma boutique", icon: Store },
+      { key: "products", label: "Produits / Services", icon: Package },
       { key: "orders", label: "Commandes", icon: ShoppingBag },
-      { key: "payment-settings", label: "Paiement", icon: Settings },
+      { key: "payment-settings", label: "Paiements", icon: CreditCard },
+    ],
+  },
+  {
+    title: "Croissance",
+    links: [
+      { key: "messages", label: "Messages WhatsApp", icon: MessageCircle },
+      { key: "qr-code", label: "QR Code", icon: QrCode },
+      { key: "stats", label: "Statistiques", icon: BarChart3 },
+    ],
+  },
+  {
+    title: "Compte",
+    links: [
+      { key: "subscription", label: "Abonnement", icon: ClipboardList },
     ],
   },
 ];
@@ -67,7 +84,7 @@ export default function Sidebar({ user, view, setView, onLogout, mode }) {
   const sections = mode === "admin" ? adminSections : merchantSections;
 
   return (
-    <aside className="border-b border-slate-200 bg-white lg:flex lg:h-screen lg:w-72 lg:flex-col lg:border-b-0 lg:border-r">
+    <aside className="border-b border-slate-200 bg-white lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:flex lg:h-screen lg:w-72 lg:flex-col lg:border-b-0 lg:border-r">
       <div className="flex items-center justify-between gap-3 border-b border-slate-100 p-4">
         <div className="flex items-center gap-3">
           <div className="grid h-10 w-10 place-items-center rounded-lg bg-emerald-600 text-white">

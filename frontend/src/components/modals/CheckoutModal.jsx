@@ -15,7 +15,7 @@ function parseOptions(optionsJson) {
 }
 
 function FieldInput({ field, value, onChange }) {
-  const baseClass = "w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-emerald-500";
+  const baseClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100";
   const options = parseOptions(field.options_json);
 
   if (field.field_type === "textarea" || field.field_type === "address") {
@@ -193,7 +193,7 @@ export default function CheckoutModal({ business, product, slug, onClose }) {
             {settings.is_wave_enabled ? (
               <div className="rounded-lg border border-slate-200 p-4">
                 <p className="font-bold text-slate-900">Payer avec Wave</p>
-                <p className="mt-1 text-sm text-slate-600">Numero Wave : <strong>{settings.wave_phone_number || "A renseigner"}</strong></p>
+                <p className="mt-1 text-sm text-slate-600">Envoyez le paiement sur le numero Wave du commercant : <strong>{settings.wave_phone_number || "A renseigner"}</strong></p>
                 <p className="text-sm text-slate-600">Montant : <strong>{fmt(createdOrder.total_amount)} FCFA</strong></p>
                 <Button className="mt-3" onClick={confirmPaymentSent}>J'ai paye</Button>
               </div>

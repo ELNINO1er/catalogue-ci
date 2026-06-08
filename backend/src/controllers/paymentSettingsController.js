@@ -43,6 +43,10 @@ exports.upsertByBusiness = async (req, res, next) => {
       defaults: { business_id: businessId },
     });
 
+    if (is_wave_enabled && !wave_phone_number && !settings.wave_phone_number) {
+      return res.status(400).json({ success: false, message: "Renseignez un numero Wave avant d'activer Wave manuel." });
+    }
+
     if (wave_phone_number !== undefined) settings.wave_phone_number = truncateText(wave_phone_number, 30);
     if (payment_mode !== undefined) settings.payment_mode = truncateText(payment_mode, 50) || "manual";
     if (is_wave_enabled !== undefined) settings.is_wave_enabled = Boolean(is_wave_enabled);

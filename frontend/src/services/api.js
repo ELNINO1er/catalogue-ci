@@ -1,7 +1,14 @@
 import axios from "axios";
 
+function resolveApiBaseUrl() {
+  if (import.meta.env.MODE === "lan") {
+    return `http://${window.location.hostname}:4000/api`;
+  }
+  return import.meta.env.VITE_API_URL || "http://localhost:4000/api";
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:4000/api",
+  baseURL: resolveApiBaseUrl(),
 });
 
 api.interceptors.request.use((config) => {

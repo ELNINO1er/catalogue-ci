@@ -78,6 +78,28 @@ exports.create = async (req, res, next) => {
   }
 };
 
+exports.uploadImage = async (req, res, next) => {
+  try {
+    const { businessId } = req.params;
+    if (!canAccessBusiness(req.user, businessId)) {
+      return res.status(403).json({ success: false, message: "Acces refuse a ce commerce." });
+    }
+
+    const business = await Business.findByPk(businessId);
+    if (!business) return res.status(404).json({ success: false, message: "Commerce introuvable." });
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "Image obligatoire." });
+    }
+
+    return res.status(201).json({
+      success: true,
+      image_url: `/uploads/products/${req.file.filename}`,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.getById = async (req, res, next) => {
   try {
     const product = await Product.findByPk(req.params.id);

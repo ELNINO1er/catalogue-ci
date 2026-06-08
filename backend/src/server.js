@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 const { sequelize } = require("./models");
 const errorHandler = require("./middleware/errorHandler");
 const authRoutes = require("./routes/authRoutes");
@@ -14,6 +15,7 @@ const customFieldRoutes = require("./routes/customFieldRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const paymentSettingsRoutes = require("./routes/paymentSettingsRoutes");
 const superAdminRoutes = require("./routes/superAdminRoutes");
+const merchantPortalRoutes = require("./routes/merchantPortalRoutes");
 
 if (!process.env.JWT_SECRET) {
   console.error("Configuration invalide : JWT_SECRET est obligatoire.");
@@ -36,15 +38,21 @@ const allowedOrigins = new Set([
   "http://127.0.0.1:5173",
 ].filter(Boolean));
 
+function isAllowedDevLanOrigin(origin) {
+  if (process.env.NODE_ENV === "production") return false;
+  return /^http:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}):5173$/.test(origin);
+}
+
 if (process.env.NODE_ENV === "production") app.set("trust proxy", 1);
 
 app.use(cors({
   origin(origin, callback) {
-    if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+    if (!origin || allowedOrigins.has(origin) || isAllowedDevLanOrigin(origin)) return callback(null, true);
     return callback(new Error(`Origin CORS non autorisee: ${origin}`));
   },
 }));
 app.use(express.json());
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
@@ -59,18 +67,36 @@ app.use("/api", customFieldRoutes);
 app.use("/api", orderRoutes);
 app.use("/api", paymentSettingsRoutes);
 app.use("/api/super-admin", superAdminRoutes);
+app.use("/api/merchant", merchantPortalRoutes);
 
 app.use((req, res) => res.status(404).json({ success: false, message: "Route introuvable." }));
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 4000;
 
-async function ensureBusinessTemplateColumn() {
-  const [columns] = await sequelize.query("SHOW COLUMNS FROM `businesses` LIKE 'template_id'");
-  if (columns.length) return;
+async function ensureBusinessColumns() {
+  const columns = [
+    { name: "banner_url", sql: "VARCHAR(500) NULL AFTER `logo_url`" },
+    { name: "template_id", sql: "INT NULL AFTER `category_id`" },
+    { name: "email", sql: "VARCHAR(180) NULL AFTER `phone_number`" },
+    { name: "terms_text", sql: "TEXT NULL AFTER `opening_hours`" },
+    { name: "delivery_policy", sql: "TEXT NULL AFTER `terms_text`" },
+    { name: "welcome_message", sql: "TEXT NULL AFTER `delivery_policy`" },
+    { name: "primary_color", sql: "VARCHAR(20) NULL AFTER `welcome_message`" },
+    { name: "secondary_color", sql: "VARCHAR(20) NULL AFTER `primary_color`" },
+    { name: "button_color", sql: "VARCHAR(20) NULL AFTER `secondary_color`" },
+    { name: "display_style", sql: "VARCHAR(30) NULL AFTER `button_color`" },
+    { name: "theme_mode", sql: "VARCHAR(20) NULL AFTER `display_style`" },
+    { name: "font_family", sql: "VARCHAR(80) NULL AFTER `theme_mode`" },
+  ];
 
-  await sequelize.query("ALTER TABLE `businesses` ADD COLUMN `template_id` INT NULL AFTER `category_id`");
-  console.log("Colonne businesses.template_id ajoutee.");
+  for (const column of columns) {
+    const [existing] = await sequelize.query(`SHOW COLUMNS FROM \`businesses\` LIKE '${column.name}'`);
+    if (!existing.length) {
+      await sequelize.query(`ALTER TABLE \`businesses\` ADD COLUMN \`${column.name}\` ${column.sql}`);
+      console.log(`Colonne businesses.${column.name} ajoutee.`);
+    }
+  }
 }
 
 (async () => {
@@ -78,9 +104,16 @@ async function ensureBusinessTemplateColumn() {
     await sequelize.authenticate();
     console.log("Connexion MySQL reussie.");
     await sequelize.sync(process.env.DB_SYNC_ALTER === "true" ? { alter: true } : {});
-    await ensureBusinessTemplateColumn();
+    await ensureBusinessColumns();
     console.log("Modeles synchronises.");
-    app.listen(PORT, () => console.log(`API sur http://localhost:${PORT}`));
+    const server = app.listen(PORT, () => console.log(`API sur http://localhost:${PORT}`));
+    server.on("error", (err) => {
+      if (err.code === "EADDRINUSE") {
+        console.error(`Port ${PORT} deja utilise. Arretez l'ancienne instance backend ou changez PORT dans .env.`);
+        process.exit(1);
+      }
+      throw err;
+    });
   } catch (err) {
     console.error("Demarrage impossible :", err.message);
     process.exit(1);

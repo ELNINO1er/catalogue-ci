@@ -10,7 +10,13 @@ vite.err.log
 backend/node_modules/
 backend/.env
 backend/*.log
+backend/uploads/*
+!backend/uploads/.gitkeep
+!backend/uploads/products/
+backend/uploads/products/*
+!backend/uploads/products/.gitkeep
 
 frontend/node_modules/
 frontend/.env
+frontend/.env.lan
 frontend/dist/

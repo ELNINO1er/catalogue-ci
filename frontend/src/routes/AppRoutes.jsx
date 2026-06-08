@@ -14,9 +14,14 @@ import TemplatesPage from "../pages/admin/TemplatesPage";
 import ActivityLogsPage from "../pages/admin/ActivityLogsPage";
 import PlatformSettingsPage from "../pages/admin/PlatformSettingsPage";
 import MerchantDashboardPage from "../pages/merchant/MerchantDashboardPage";
+import MerchantBusinessPage from "../pages/merchant/MerchantBusinessPage";
 import ProductsPage from "../pages/merchant/ProductsPage";
 import OrdersPage from "../pages/merchant/OrdersPage";
 import PaymentSettingsPage from "../pages/merchant/PaymentSettingsPage";
+import MerchantMessagesPage from "../pages/merchant/MerchantMessagesPage";
+import MerchantQrPage from "../pages/merchant/MerchantQrPage";
+import MerchantStatsPage from "../pages/merchant/MerchantStatsPage";
+import MerchantSubscriptionPage from "../pages/merchant/MerchantSubscriptionPage";
 import PublicCataloguePage from "../pages/public/PublicCataloguePage";
 
 export default function AppRoutes({
@@ -48,9 +53,14 @@ export default function AppRoutes({
       return <AdminDashboardPage setPublicSlug={setPublicSlug} />;
     }
 
+    if (view === "store-profile") return <MerchantBusinessPage setPublicSlug={setPublicSlug} />;
     if (view === "products") return <ProductsPage user={user} />;
     if (view === "orders") return <OrdersPage user={user} />;
     if (view === "payment-settings") return <PaymentSettingsPage user={user} />;
+    if (view === "messages") return <MerchantMessagesPage />;
+    if (view === "qr-code") return <MerchantQrPage setPublicSlug={setPublicSlug} setQrBusiness={setQrBusiness} />;
+    if (view === "stats") return <MerchantStatsPage />;
+    if (view === "subscription") return <MerchantSubscriptionPage />;
     return (
       <MerchantDashboardPage
         user={user}

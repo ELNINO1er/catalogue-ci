@@ -1,0 +1,5 @@
+{
+  "watch": ["src", "package.json"],
+  "ext": "js,json",
+  "ignore": ["uploads/**", "*.log", "server.log", "server.err.log"]
+}

@@ -13,3 +13,17 @@ select,
 textarea {
   font: inherit;
 }
+
+select {
+  accent-color: #059669;
+}
+
+select:focus {
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.14);
+}
+
+select option:checked {
+  background: #059669;
+  color: #ffffff;
+}

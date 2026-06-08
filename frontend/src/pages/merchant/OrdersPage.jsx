@@ -6,7 +6,19 @@ import { listOrdersByBusiness, updateOrderStatus } from "../../services/orderSer
 import { fmt } from "../../utils/formatters";
 import { buildCustomerWhatsAppLink } from "../../utils/whatsappMessage";
 
-const statuses = ["", "PENDING", "AWAITING_PAYMENT", "AWAITING_VERIFICATION", "CONFIRMED", "IN_PROGRESS", "READY", "DELIVERED", "CANCELLED"];
+const statuses = [
+  { value: "", label: "Tous les statuts" },
+  { value: "PENDING", label: "Nouvelle commande" },
+  { value: "AWAITING_PAYMENT", label: "En attente de paiement" },
+  { value: "AWAITING_VERIFICATION", label: "Paiement a verifier" },
+  { value: "CONFIRMED", label: "Confirmee" },
+  { value: "IN_PROGRESS", label: "En cours" },
+  { value: "READY", label: "Prete" },
+  { value: "DELIVERED", label: "Livree" },
+  { value: "CANCELLED", label: "Annulee" },
+];
+
+const selectClass = "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100";
 
 export default function OrdersPage({ user }) {
   const [profile, setProfile] = useState(user);
@@ -40,8 +52,8 @@ export default function OrdersPage({ user }) {
     <div className="space-y-5 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-slate-900">Commandes</h1>
-        <select value={status} onChange={(event) => setStatus(event.target.value)} className="rounded-lg border border-slate-300 px-3 py-2">
-          {statuses.map((item) => <option key={item || "all"} value={item}>{item || "Tous les statuts"}</option>)}
+        <select value={status} onChange={(event) => setStatus(event.target.value)} className={selectClass}>
+          {statuses.map((item) => <option key={item.value || "all"} value={item.value}>{item.label}</option>)}
         </select>
       </div>
 

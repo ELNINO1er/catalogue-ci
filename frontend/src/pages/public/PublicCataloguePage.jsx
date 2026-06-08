@@ -4,6 +4,7 @@ import Button from "../../components/ui/Button";
 import CheckoutModal from "../../components/modals/CheckoutModal";
 import { getPublicCatalogue } from "../../services/businessService";
 import { fmt } from "../../utils/formatters";
+import { mediaUrl } from "../../utils/media";
 
 export default function PublicCataloguePage({ slug, onBack, setQrBusiness }) {
   const [business, setBusiness] = useState(null);
@@ -29,20 +30,30 @@ export default function PublicCataloguePage({ slug, onBack, setQrBusiness }) {
 
   if (!business) return <p className="p-5 text-sm text-slate-500">Chargement...</p>;
 
+  const primaryColor = business.primary_color || "#059669";
+  const buttonColor = business.button_color || primaryColor;
+  const displayAsList = business.display_style === "list";
+
   return (
     <main className="min-h-screen bg-slate-100">
-      <div className="bg-slate-950 text-white">
+      <div className="text-white" style={{ backgroundColor: primaryColor }}>
         <div className="mx-auto max-w-3xl px-5 py-8">
           <button onClick={onBack} className="mb-6 text-sm text-slate-300 hover:text-white">Retour</button>
-          <p className="text-sm text-emerald-300">{business.category?.name || "Commerce"}</p>
-          <h1 className="mt-1 text-3xl font-bold">{business.name}</h1>
-          <p className="mt-3 max-w-xl text-slate-300">{business.description}</p>
+          {business.banner_url ? <img src={business.banner_url} alt="" className="mb-5 h-40 w-full rounded-lg object-cover" /> : null}
+          <div className="flex items-center gap-3">
+            {business.logo_url ? <img src={business.logo_url} alt={business.name} className="h-14 w-14 rounded-lg bg-white object-cover" /> : null}
+            <div>
+              <p className="text-sm text-white/80">{business.category?.name || "Commerce"}</p>
+              <h1 className="mt-1 text-3xl font-bold">{business.name}</h1>
+            </div>
+          </div>
+          <p className="mt-3 max-w-xl text-white/85">{business.welcome_message || business.description}</p>
         </div>
       </div>
 
       <div className="mx-auto grid max-w-3xl gap-5 px-5 py-5">
         <div className="grid gap-3 sm:grid-cols-3">
-          <a className="flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-3 font-semibold text-white" href={`https://wa.me/${business.whatsapp_number}`} target="_blank" rel="noreferrer">
+          <a className="flex items-center justify-center gap-2 rounded-lg px-3 py-3 font-semibold text-white" style={{ backgroundColor: buttonColor }} href={`https://wa.me/${business.whatsapp_number}`} target="_blank" rel="noreferrer">
             <MessageCircle size={18} />
             WhatsApp
           </a>
@@ -58,15 +69,16 @@ export default function PublicCataloguePage({ slug, onBack, setQrBusiness }) {
 
         <section>
           <h2 className="mb-3 text-lg font-bold text-slate-900">Catalogue</h2>
-          <div className="grid gap-3">
+          <div className={displayAsList ? "grid gap-3" : "grid gap-3 sm:grid-cols-2"}>
             {business.products.map((product) => (
-              <div key={product.id} className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-[1fr_auto] sm:items-center">
+              <div key={product.id} className={`grid gap-3 rounded-lg border border-slate-200 bg-white p-4 ${displayAsList ? "sm:grid-cols-[1fr_auto] sm:items-center" : ""}`}>
+                {product.image_url ? <img src={mediaUrl(product.image_url)} alt={product.name} className="h-36 w-full rounded-lg object-cover" /> : null}
                 <div>
                   <p className="font-semibold text-slate-900">{product.name}</p>
                   <p className="text-sm text-slate-500">{product.description}</p>
-                  <p className="mt-2 font-bold text-emerald-700">{fmt(product.price)} FCFA</p>
+                  <p className="mt-2 font-bold" style={{ color: primaryColor }}>{fmt(product.price)} FCFA</p>
                 </div>
-                <Button disabled={!product.is_available} onClick={() => setCheckoutProduct(product)}>
+                <Button disabled={!product.is_available} onClick={() => setCheckoutProduct(product)} style={{ backgroundColor: product.is_available ? buttonColor : undefined }}>
                   <MessageCircle size={16} />
                   Commander
                 </Button>
@@ -85,6 +97,17 @@ export default function PublicCataloguePage({ slug, onBack, setQrBusiness }) {
             ))}
           </div>
         </section>
+
+        {(business.terms_text || business.delivery_policy || business.opening_hours) ? (
+          <section className="rounded-lg border border-slate-200 bg-white p-4">
+            <h2 className="mb-3 text-lg font-bold text-slate-900">Informations</h2>
+            <div className="space-y-2 text-sm text-slate-600">
+              {business.opening_hours ? <p><span className="font-semibold text-slate-800">Horaires :</span> {business.opening_hours}</p> : null}
+              {business.terms_text ? <p><span className="font-semibold text-slate-800">Conditions :</span> {business.terms_text}</p> : null}
+              {business.delivery_policy ? <p><span className="font-semibold text-slate-800">Livraison :</span> {business.delivery_policy}</p> : null}
+            </div>
+          </section>
+        ) : null}
 
         <section className="rounded-lg border border-slate-200 bg-white p-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
