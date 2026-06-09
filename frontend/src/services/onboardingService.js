@@ -19,3 +19,21 @@ export async function createQuickProducts(products) {
   const { data } = await api.post("/merchant/onboarding/quick-products", { products });
   return data;
 }
+
+export async function uploadBusinessImage(file) {
+  const formData = new FormData();
+  formData.append("image", file);
+  const { data } = await api.post("/merchant/onboarding/upload-image", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data.image_url;
+}
+
+export async function uploadOnboardingProductImage(file) {
+  const formData = new FormData();
+  formData.append("image", file);
+  const { data } = await api.post("/merchant/onboarding/upload-product-image", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data.image_url;
+}

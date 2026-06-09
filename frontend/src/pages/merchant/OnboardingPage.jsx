@@ -7,10 +7,10 @@ import {
 import { QRCodeCanvas } from "qrcode.react";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
-import Input from "../../components/ui/Input";
+import Input, { Select } from "../../components/ui/Input";
+import ImageUpload from "../../components/ui/ImageUpload";
 import { PageLoading } from "../../components/ui/LoadingSpinner";
-import { getOnboardingData, saveOnboardingStep, completeOnboarding, createQuickProducts } from "../../services/onboardingService";
-import { uploadProductImage } from "../../services/productService";
+import { getOnboardingData, saveOnboardingStep, completeOnboarding, createQuickProducts, uploadBusinessImage, uploadOnboardingProductImage } from "../../services/onboardingService";
 import { fmt } from "../../utils/formatters";
 import { mediaUrl } from "../../utils/media";
 import toast, { Toaster } from "react-hot-toast";
@@ -264,19 +264,29 @@ export default function OnboardingPage({ user, setView }) {
               <span className="text-sm font-semibold text-brand-700">Description</span>
               <textarea value={biz.description || ""} onChange={(e) => updateBiz("description", e.target.value)} rows={3} className="input-base resize-none" placeholder="Decrivez votre boutique en quelques mots..." />
             </div>
-            <div className="grid gap-1.5">
-              <span className="text-sm font-semibold text-brand-700">Categorie</span>
-              <select value={biz.category_id || ""} onChange={(e) => updateBiz("category_id", e.target.value)} className="input-base">
-                <option value="">Choisir une categorie</option>
-                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
+            <Select label="Categorie" value={biz.category_id || ""} onChange={(e) => updateBiz("category_id", e.target.value)}>
+              <option value="">Choisir une categorie</option>
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </Select>
             <div className="grid gap-4 sm:grid-cols-2">
               <Input label="Ville" value={biz.city || ""} onChange={(e) => updateBiz("city", e.target.value)} placeholder="Ex: Abidjan" />
               <Input label="Commune" value={biz.commune || ""} onChange={(e) => updateBiz("commune", e.target.value)} placeholder="Ex: Cocody" />
             </div>
-            <Input label="URL du logo" value={biz.logo_url || ""} onChange={(e) => updateBiz("logo_url", e.target.value)} placeholder="https://..." />
-            <Input label="URL de la banniere" value={biz.banner_url || ""} onChange={(e) => updateBiz("banner_url", e.target.value)} placeholder="https://..." />
+            <div className="grid gap-6 sm:grid-cols-2">
+              <ImageUpload
+                label="Logo de la boutique"
+                value={biz.logo_url}
+                onChange={(url) => updateBiz("logo_url", url)}
+                onUpload={uploadBusinessImage}
+                shape="round"
+              />
+              <ImageUpload
+                label="Banniere"
+                value={biz.banner_url}
+                onChange={(url) => updateBiz("banner_url", url)}
+                onUpload={uploadBusinessImage}
+              />
+            </div>
           </div>
         )}
 
@@ -529,11 +539,18 @@ export default function OnboardingPage({ user, setView }) {
             ) : null}
 
             {quickProds.map((p, i) => (
-              <div key={i} className="grid gap-3 rounded-xl border border-surface-border p-4 sm:grid-cols-2">
-                <Input label={`Produit ${i + 1} — Nom`} value={p.name} onChange={(e) => { const next = [...quickProds]; next[i] = { ...next[i], name: e.target.value }; setQuickProds(next); }} placeholder="Ex: Poulet braise" />
-                <Input label="Prix (FCFA)" type="number" value={p.price} onChange={(e) => { const next = [...quickProds]; next[i] = { ...next[i], price: e.target.value }; setQuickProds(next); }} placeholder="3500" />
-                <div className="sm:col-span-2">
-                  <Input label="Description" value={p.description} onChange={(e) => { const next = [...quickProds]; next[i] = { ...next[i], description: e.target.value }; setQuickProds(next); }} placeholder="Courte description..." />
+              <div key={i} className="rounded-xl border border-surface-border p-4">
+                <div className="grid gap-3 sm:grid-cols-[140px_1fr]">
+                  <ImageUpload
+                    value={p.image_url}
+                    onChange={(url) => { const next = [...quickProds]; next[i] = { ...next[i], image_url: url }; setQuickProds(next); }}
+                    onUpload={uploadOnboardingProductImage}
+                  />
+                  <div className="grid gap-3">
+                    <Input label={`Produit ${i + 1} — Nom *`} value={p.name} onChange={(e) => { const next = [...quickProds]; next[i] = { ...next[i], name: e.target.value }; setQuickProds(next); }} placeholder="Ex: Poulet braise" />
+                    <Input label="Prix (FCFA) *" type="number" value={p.price} onChange={(e) => { const next = [...quickProds]; next[i] = { ...next[i], price: e.target.value }; setQuickProds(next); }} placeholder="3500" inputMode="numeric" />
+                    <Input label="Description" value={p.description} onChange={(e) => { const next = [...quickProds]; next[i] = { ...next[i], description: e.target.value }; setQuickProds(next); }} placeholder="Courte description..." />
+                  </div>
                 </div>
               </div>
             ))}

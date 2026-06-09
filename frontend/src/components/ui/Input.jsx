@@ -1,3 +1,5 @@
+import { ChevronDown } from "lucide-react";
+
 export default function Input({ label, error, className = "", ...props }) {
   return (
     <label className="grid gap-1.5">
@@ -22,7 +24,10 @@ export function Select({ label, error, children, className = "", ...props }) {
   return (
     <label className="grid gap-1.5">
       {label ? <span className="text-sm font-semibold text-brand-700">{label}</span> : null}
-      <select className={`input-base ${className}`} {...props}>{children}</select>
+      <div className="relative">
+        <select className={`input-base appearance-none pr-10 ${className}`} {...props}>{children}</select>
+        <ChevronDown size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+      </div>
       {error ? <span className="text-xs text-rose-600">{error}</span> : null}
     </label>
   );

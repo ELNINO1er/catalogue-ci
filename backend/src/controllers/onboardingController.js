@@ -10,7 +10,6 @@ const {
   Plan,
 } = require("../models");
 const { truncateText, isValidPhone, isValidEmail } = require("../utils/validators");
-const upload = require("../middleware/upload");
 
 const HEX_RE = /^#[0-9A-Fa-f]{3,8}$/;
 const URL_RE = /^https?:\/\/.+/i;
@@ -214,6 +213,28 @@ exports.quickProducts = async (req, res, next) => {
     }
 
     res.status(201).json({ success: true, products: created });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/merchant/onboarding/upload-image — upload logo or banner
+exports.uploadImage = async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: "Aucun fichier envoye." });
+    const imageUrl = `/uploads/businesses/${req.file.filename}`;
+    res.json({ success: true, image_url: imageUrl });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/merchant/onboarding/upload-product-image — upload product image
+exports.uploadProductImage = async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: "Aucun fichier envoye." });
+    const imageUrl = `/uploads/products/${req.file.filename}`;
+    res.json({ success: true, image_url: imageUrl });
   } catch (err) {
     next(err);
   }
