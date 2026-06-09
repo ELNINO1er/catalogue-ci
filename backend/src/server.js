@@ -74,7 +74,7 @@ app.use("/api/merchant", merchantPortalRoutes);
 app.use("/api/merchant/onboarding", onboardingRoutes);
 
 // ─── Production: serve React frontend ───
-const frontendDist = path.join(__dirname, "../../frontend/dist");
+const frontendDist = path.join(__dirname, "../public");
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(frontendDist));
 }
