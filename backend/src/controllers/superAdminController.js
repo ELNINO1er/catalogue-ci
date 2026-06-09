@@ -15,6 +15,7 @@ const {
 const { logActivity } = require("../utils/activityLogger");
 const { truncateText } = require("../utils/validators");
 const { generateUniqueSlug } = require("../utils/slug");
+const { clearWaveConfigCache } = require("../services/waveService");
 
 function parseJson(value) {
   if (!value) return null;
@@ -282,7 +283,16 @@ exports.listLogs = async (req, res, next) => {
 exports.getSettings = async (req, res, next) => {
   try {
     const rows = await PlatformSetting.findAll();
-    res.json(rows.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {}));
+    const sensitiveKeys = new Set(["wave_api_key", "wave_signing_secret", "wave_webhook_secret"]);
+    const settings = {};
+    for (const row of rows) {
+      if (sensitiveKeys.has(row.key) && row.value) {
+        settings[row.key] = row.value.slice(0, 6) + "****" + row.value.slice(-4);
+      } else {
+        settings[row.key] = row.value;
+      }
+    }
+    res.json(settings);
   } catch (err) {
     next(err);
   }
@@ -290,16 +300,32 @@ exports.getSettings = async (req, res, next) => {
 
 exports.saveSettings = async (req, res, next) => {
   try {
-    const allowed = ["platform_name", "currency", "country", "support_email", "support_whatsapp", "maintenance_mode"];
+    const allowed = [
+      "platform_name", "currency", "country", "support_email", "support_whatsapp", "maintenance_mode",
+      "wave_api_key", "wave_signing_secret", "wave_webhook_secret", "wave_currency", "wave_checkout_enabled",
+    ];
+    let waveChanged = false;
     for (const key of allowed) {
       if (req.body[key] !== undefined) {
         const [setting] = await PlatformSetting.findOrCreate({ where: { key }, defaults: { value: "" } });
         setting.value = truncateText(req.body[key], 2000);
         await setting.save();
+        if (key.startsWith("wave_")) waveChanged = true;
       }
     }
+    if (waveChanged) clearWaveConfigCache();
     await logActivity(req, { action: "UPDATE_PLATFORM_SETTINGS", module: "settings" });
     exports.getSettings(req, res, next);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getWaveStatus = async (req, res, next) => {
+  try {
+    const { isWaveCheckoutAvailable } = require("../services/waveService");
+    const available = await isWaveCheckoutAvailable();
+    res.json({ wave_checkout_available: available });
   } catch (err) {
     next(err);
   }

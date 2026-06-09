@@ -30,6 +30,10 @@ const Order = sequelize.define(
       defaultValue: "PENDING",
     },
     payment_method: { type: DataTypes.STRING(50), allowNull: true },
+    wave_checkout_session_id: { type: DataTypes.STRING(120), allowNull: true },
+    wave_launch_url: { type: DataTypes.STRING(500), allowNull: true },
+    wave_transaction_id: { type: DataTypes.STRING(120), allowNull: true },
+    paid_at: { type: DataTypes.DATE, allowNull: true },
   },
   { tableName: "orders" }
 );

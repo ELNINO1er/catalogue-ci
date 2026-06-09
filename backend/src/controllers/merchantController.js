@@ -5,13 +5,19 @@ const { validatePasswordStrength } = require("../utils/passwordPolicy");
 
 exports.list = async (req, res, next) => {
   try {
-    const merchants = await User.findAll({
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await User.findAndCountAll({
       where: { role: "MERCHANT" },
       attributes: { exclude: ["password_hash"] },
       include: [{ model: Business, as: "business", attributes: ["id", "name", "slug"] }],
       order: [["created_at", "DESC"]],
+      limit,
+      offset,
     });
-    return res.json(merchants);
+    return res.json({ data: rows, pagination: { page, limit, total: count, pages: Math.ceil(count / limit) } });
   } catch (err) {
     next(err);
   }

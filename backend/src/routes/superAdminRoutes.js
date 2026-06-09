@@ -28,5 +28,6 @@ router.get("/activity-logs", ctrl.listLogs);
 
 router.get("/settings", ctrl.getSettings);
 router.put("/settings", ctrl.saveSettings);
+router.get("/wave-status", ctrl.getWaveStatus);
 
 module.exports = router;

@@ -69,6 +69,7 @@ export default function ProductsPage({ user }) {
   }
 
   async function removeProduct(id) {
+    if (!window.confirm("Supprimer ce produit ? Cette action est irreversible.")) return;
     await deleteProduct(id);
     await loadProducts();
   }

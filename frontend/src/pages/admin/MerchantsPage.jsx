@@ -83,6 +83,8 @@ export default function MerchantsPage() {
   }
 
   async function setMerchantActive(merchant, isActive) {
+    const action = isActive ? "reactiver" : "suspendre";
+    if (!window.confirm(`Voulez-vous ${action} le compte de "${merchant.name}" ?`)) return;
     await toggleMerchant(merchant.id, isActive);
     await load();
   }

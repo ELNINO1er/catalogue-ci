@@ -31,8 +31,26 @@ const trackingLimiter = rateLimit({
   message: rateLimitMessage("Trop de demandes WhatsApp. Reessayez dans quelques minutes."),
 });
 
+const orderCreationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: rateLimitMessage("Trop de commandes creees. Reessayez dans quelques minutes."),
+});
+
+const waveCheckoutLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: rateLimitMessage("Trop de tentatives de paiement. Reessayez dans quelques minutes."),
+});
+
 module.exports = {
   loginLimiter,
   publicCatalogueLimiter,
   trackingLimiter,
+  orderCreationLimiter,
+  waveCheckoutLimiter,
 };

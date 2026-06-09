@@ -11,6 +11,7 @@ const {
   Plan,
 } = require("../models");
 const { generateUniqueSlug } = require("../utils/slug");
+const { logActivity } = require("../utils/activityLogger");
 
 function addOneMonth(date = new Date()) {
   const next = new Date(date);
@@ -51,11 +52,14 @@ async function applyPlanToBusiness(businessId, planId) {
 exports.list = async (req, res, next) => {
   try {
     const { search, category_id } = req.query;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const offset = (page - 1) * limit;
     const where = {};
     if (search) where.name = { [Op.like]: `%${search}%` };
     if (category_id) where.category_id = Number(category_id);
 
-    const businesses = await Business.findAll({
+    const { count, rows } = await Business.findAndCountAll({
       where,
       include: [
         { model: Category, as: "category" },
@@ -64,10 +68,13 @@ exports.list = async (req, res, next) => {
         { model: Product, as: "products", attributes: ["id"] },
       ],
       order: [["created_at", "DESC"]],
+      limit,
+      offset,
+      distinct: true,
     });
 
-    return res.json(
-      businesses.map((business) => {
+    return res.json({
+      data: rows.map((business) => {
         const json = business.toJSON();
         json.products_count = json.products ? json.products.length : 0;
         json.current_subscription = (json.subscriptions || []).sort(
@@ -76,8 +83,9 @@ exports.list = async (req, res, next) => {
         delete json.products;
         delete json.subscriptions;
         return json;
-      })
-    );
+      }),
+      pagination: { page, limit, total: count, pages: Math.ceil(count / limit) },
+    });
   } catch (err) {
     next(err);
   }
@@ -144,6 +152,7 @@ exports.create = async (req, res, next) => {
       await applyPlanToBusiness(business.id, plan_id);
     }
 
+    logActivity(req, { action: "create_business", module: "business", business_id: business.id, details: { name } });
     return res.status(201).json(business);
   } catch (err) {
     next(err);
@@ -187,6 +196,7 @@ exports.update = async (req, res, next) => {
       await applyPlanToBusiness(business.id, req.body.plan_id);
     }
 
+    logActivity(req, { action: "update_business", module: "business", business_id: business.id, details: { name: business.name } });
     return res.json(business);
   } catch (err) {
     next(err);
@@ -197,7 +207,9 @@ exports.remove = async (req, res, next) => {
   try {
     const business = await Business.findByPk(req.params.id);
     if (!business) return res.status(404).json({ message: "Commerce introuvable." });
+    const businessName = business.name;
     await business.destroy();
+    logActivity(req, { action: "delete_business", module: "business", business_id: business.id, details: { name: businessName } });
     return res.json({ message: "Commerce supprime." });
   } catch (err) {
     next(err);
@@ -234,7 +246,16 @@ exports.publicCatalogue = async (req, res, next) => {
         {
           model: MerchantPaymentSettings,
           as: "paymentSettings",
-          attributes: ["wave_phone_number", "payment_mode", "is_wave_enabled", "is_whatsapp_enabled"],
+          attributes: [
+            "wave_phone_number",
+            "wave_account_name",
+            "payment_instructions",
+            "payment_mode",
+            "is_wave_checkout_enabled",
+            "is_wave_enabled",
+            "is_cod_enabled",
+            "is_whatsapp_enabled",
+          ],
         },
       ],
       attributes: { exclude: ["category_id", "is_active", "created_at", "updated_at"] },

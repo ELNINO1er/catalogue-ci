@@ -29,6 +29,14 @@ function startOfMonth() {
   return date;
 }
 
+function startOfWeek() {
+  const date = new Date();
+  const day = date.getDay() || 7;
+  date.setDate(date.getDate() - day + 1);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
 async function getCurrentSubscription(businessId) {
   return Subscription.findOne({
     where: {
@@ -124,6 +132,104 @@ exports.dashboard = async (req, res, next) => {
           orders_count: Number(item.get("orders_count")),
         })),
       },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.analytics = async (req, res, next) => {
+  try {
+    const business = await loadOwnedBusiness(req, res);
+    if (!business) return;
+
+    const businessId = business.id;
+    const week = startOfWeek();
+    const month = startOfMonth();
+
+    const [
+      totalOrders,
+      ordersWeek,
+      ordersMonth,
+      paidOrders,
+      totalSales,
+      monthlySales,
+      whatsappClicks,
+      productsCount,
+      statusBreakdown,
+      paymentBreakdown,
+      topProducts,
+    ] = await Promise.all([
+      Order.count({ where: { business_id: businessId } }),
+      Order.count({ where: { business_id: businessId, created_at: { [Op.gte]: week } } }),
+      Order.count({ where: { business_id: businessId, created_at: { [Op.gte]: month } } }),
+      Order.count({ where: { business_id: businessId, payment_status: "PAID" } }),
+      Order.sum("total_amount", { where: { business_id: businessId, payment_status: "PAID" } }),
+      Order.sum("total_amount", { where: { business_id: businessId, payment_status: "PAID", created_at: { [Op.gte]: month } } }),
+      OrderTracking.count({ where: { business_id: businessId } }),
+      Product.count({ where: { business_id: businessId, is_active: true } }),
+      Order.findAll({
+        where: { business_id: businessId },
+        attributes: ["status", [fn("COUNT", col("Order.id")), "count"]],
+        group: ["status"],
+        order: [[literal("count"), "DESC"]],
+      }),
+      Order.findAll({
+        where: { business_id: businessId },
+        attributes: ["payment_status", [fn("COUNT", col("Order.id")), "count"]],
+        group: ["payment_status"],
+        order: [[literal("count"), "DESC"]],
+      }),
+      Order.findAll({
+        where: { business_id: businessId },
+        attributes: [
+          "product_id",
+          [fn("COUNT", col("Order.id")), "orders_count"],
+          [fn("SUM", col("Order.total_amount")), "revenue"],
+        ],
+        include: [{ model: Product, as: "product", attributes: ["id", "name"] }],
+        group: ["product_id", "product.id"],
+        order: [[literal("orders_count"), "DESC"]],
+        limit: 10,
+      }),
+    ]);
+
+    const sales = Number(totalSales || 0);
+    const conversionRate = whatsappClicks ? Math.round((totalOrders / whatsappClicks) * 100) : 0;
+    const averageBasket = paidOrders ? Math.round(sales / paidOrders) : 0;
+
+    res.json({
+      business: {
+        id: business.id,
+        name: business.name,
+        slug: business.slug,
+      },
+      summary: {
+        products_count: productsCount,
+        total_orders: totalOrders,
+        orders_week: ordersWeek,
+        orders_month: ordersMonth,
+        paid_orders: paidOrders,
+        total_sales: sales,
+        monthly_sales: Number(monthlySales || 0),
+        whatsapp_clicks: whatsappClicks,
+        conversion_rate: conversionRate,
+        average_basket: averageBasket,
+      },
+      status_breakdown: statusBreakdown.map((item) => ({
+        status: item.status,
+        count: Number(item.get("count")),
+      })),
+      payment_breakdown: paymentBreakdown.map((item) => ({
+        status: item.payment_status,
+        count: Number(item.get("count")),
+      })),
+      top_products: topProducts.map((item) => ({
+        product_id: item.product_id,
+        name: item.product?.name || "Produit supprime",
+        orders_count: Number(item.get("orders_count")),
+        revenue: Number(item.get("revenue") || 0),
+      })),
     });
   } catch (err) {
     next(err);

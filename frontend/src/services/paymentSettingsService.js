@@ -1,5 +1,10 @@
 import api from "./api";
 
+export async function getWaveStatus() {
+  const { data } = await api.get("/public/wave-status");
+  return data;
+}
+
 export async function getPaymentSettings(businessId) {
   const { data } = await api.get(`/businesses/${businessId}/payment-settings`);
   return data;

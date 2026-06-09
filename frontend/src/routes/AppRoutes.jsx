@@ -23,6 +23,7 @@ import MerchantQrPage from "../pages/merchant/MerchantQrPage";
 import MerchantStatsPage from "../pages/merchant/MerchantStatsPage";
 import MerchantSubscriptionPage from "../pages/merchant/MerchantSubscriptionPage";
 import PublicCataloguePage from "../pages/public/PublicCataloguePage";
+import OrderTrackingPage from "../pages/public/OrderTrackingPage";
 
 export default function AppRoutes({
   user,
@@ -32,6 +33,8 @@ export default function AppRoutes({
   onLogout,
   publicSlug,
   setPublicSlug,
+  publicPage,
+  setPublicPage,
   setQrBusiness,
 }) {
   const content = useMemo(() => {
@@ -71,11 +74,16 @@ export default function AppRoutes({
     );
   }, [user, view, setView, setPublicSlug, setQrBusiness]);
 
+  if (publicPage === "track-order") {
+    return <OrderTrackingPage onBack={() => setPublicPage(null)} />;
+  }
+
   if (publicSlug) {
     return (
       <PublicCataloguePage
         slug={publicSlug}
         onBack={() => setPublicSlug(null)}
+        setPublicPage={setPublicPage}
         setQrBusiness={setQrBusiness}
       />
     );

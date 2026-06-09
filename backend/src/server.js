@@ -16,6 +16,7 @@ const orderRoutes = require("./routes/orderRoutes");
 const paymentSettingsRoutes = require("./routes/paymentSettingsRoutes");
 const superAdminRoutes = require("./routes/superAdminRoutes");
 const merchantPortalRoutes = require("./routes/merchantPortalRoutes");
+const waveWebhookController = require("./controllers/waveWebhookController");
 
 if (!process.env.JWT_SECRET) {
   console.error("Configuration invalide : JWT_SECRET est obligatoire.");
@@ -51,6 +52,7 @@ app.use(cors({
     return callback(new Error(`Origin CORS non autorisee: ${origin}`));
   },
 }));
+app.post("/api/wave/webhook", express.raw({ type: "application/json" }), waveWebhookController.handle);
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
@@ -99,12 +101,48 @@ async function ensureBusinessColumns() {
   }
 }
 
+async function ensurePaymentSettingsColumns() {
+  const columns = [
+    { name: "wave_account_name", sql: "VARCHAR(120) NULL AFTER `wave_phone_number`" },
+    { name: "payment_instructions", sql: "TEXT NULL AFTER `wave_account_name`" },
+    { name: "is_wave_checkout_enabled", sql: "TINYINT(1) NOT NULL DEFAULT 0 AFTER `payment_mode`" },
+    { name: "is_cod_enabled", sql: "TINYINT(1) NOT NULL DEFAULT 0 AFTER `is_wave_enabled`" },
+  ];
+
+  for (const column of columns) {
+    const [existing] = await sequelize.query(`SHOW COLUMNS FROM \`merchant_payment_settings\` LIKE '${column.name}'`);
+    if (!existing.length) {
+      await sequelize.query(`ALTER TABLE \`merchant_payment_settings\` ADD COLUMN \`${column.name}\` ${column.sql}`);
+      console.log(`Colonne merchant_payment_settings.${column.name} ajoutee.`);
+    }
+  }
+}
+
+async function ensureOrderColumns() {
+  const columns = [
+    { name: "wave_checkout_session_id", sql: "VARCHAR(120) NULL AFTER `payment_method`" },
+    { name: "wave_launch_url", sql: "VARCHAR(500) NULL AFTER `wave_checkout_session_id`" },
+    { name: "wave_transaction_id", sql: "VARCHAR(120) NULL AFTER `wave_launch_url`" },
+    { name: "paid_at", sql: "DATETIME NULL AFTER `wave_transaction_id`" },
+  ];
+
+  for (const column of columns) {
+    const [existing] = await sequelize.query(`SHOW COLUMNS FROM \`orders\` LIKE '${column.name}'`);
+    if (!existing.length) {
+      await sequelize.query(`ALTER TABLE \`orders\` ADD COLUMN \`${column.name}\` ${column.sql}`);
+      console.log(`Colonne orders.${column.name} ajoutee.`);
+    }
+  }
+}
+
 (async () => {
   try {
     await sequelize.authenticate();
     console.log("Connexion MySQL reussie.");
     await sequelize.sync(process.env.DB_SYNC_ALTER === "true" ? { alter: true } : {});
     await ensureBusinessColumns();
+    await ensurePaymentSettingsColumns();
+    await ensureOrderColumns();
     console.log("Modeles synchronises.");
     const server = app.listen(PORT, () => console.log(`API sur http://localhost:${PORT}`));
     server.on("error", (err) => {

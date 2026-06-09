@@ -5,6 +5,11 @@ export async function getMerchantDashboard() {
   return data;
 }
 
+export async function getMerchantAnalytics() {
+  const { data } = await api.get("/merchant/analytics");
+  return data;
+}
+
 export async function getMerchantBusiness() {
   const { data } = await api.get("/merchant/business");
   return data;

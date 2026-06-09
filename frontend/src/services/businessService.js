@@ -5,9 +5,9 @@ export async function getAdminOverview() {
   return data;
 }
 
-export async function listBusinesses() {
-  const { data } = await api.get("/businesses");
-  return data;
+export async function listBusinesses(params = {}) {
+  const { data } = await api.get("/businesses", { params });
+  return data.data || data;
 }
 
 export async function createBusiness(payload) {
@@ -30,9 +30,9 @@ export async function getBusinessStats(businessId) {
   return data;
 }
 
-export async function listMerchants() {
-  const { data } = await api.get("/merchants");
-  return data;
+export async function listMerchants(params = {}) {
+  const { data } = await api.get("/merchants", { params });
+  return data.data || data;
 }
 
 export async function createMerchant(payload) {

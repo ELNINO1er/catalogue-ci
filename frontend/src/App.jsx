@@ -10,10 +10,15 @@ export default function App() {
     const match = window.location.pathname.match(/^\/catalogue\/([^/]+)/);
     return match?.[1] || null;
   });
+  const [publicPage, setPublicPage] = useState(() => (
+    window.location.pathname === "/suivi-commande" ? "track-order" : null
+  ));
   const [qrBusiness, setQrBusiness] = useState(null);
 
   useEffect(() => {
-    if (publicSlug) {
+    if (publicPage === "track-order") {
+      window.history.replaceState(null, "", "/suivi-commande");
+    } else if (publicSlug) {
       window.history.replaceState(null, "", `/catalogue/${publicSlug}`);
     } else {
       window.history.replaceState(null, "", "/");
@@ -36,6 +41,8 @@ export default function App() {
         onLogout={handleLogout}
         publicSlug={publicSlug}
         setPublicSlug={setPublicSlug}
+        publicPage={publicPage}
+        setPublicPage={setPublicPage}
         setQrBusiness={setQrBusiness}
       />
       {qrBusiness ? <QRModal business={qrBusiness} onClose={() => setQrBusiness(null)} /> : null}

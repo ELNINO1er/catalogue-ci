@@ -116,6 +116,8 @@ export default function BusinessesPage({ setPublicSlug, setQrBusiness }) {
   }
 
   async function toggleBusiness(business) {
+    const action = business.is_active ? "suspendre" : "reactiver";
+    if (!window.confirm(`Voulez-vous ${action} la boutique "${business.name}" ?`)) return;
     await updateBusiness(business.id, { is_active: !business.is_active });
     await loadBusinesses();
   }

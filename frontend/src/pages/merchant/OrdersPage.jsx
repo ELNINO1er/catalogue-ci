@@ -18,11 +18,35 @@ const statuses = [
   { value: "CANCELLED", label: "Annulee" },
 ];
 
+const statusLabels = {
+  PENDING: "Nouvelle commande",
+  AWAITING_PAYMENT: "En attente de paiement",
+  AWAITING_VERIFICATION: "Paiement a verifier",
+  PAID: "Payee",
+  CONFIRMED: "Confirmee",
+  IN_PROGRESS: "En cours",
+  READY: "Prete",
+  DELIVERED: "Livree",
+  CANCELLED: "Annulee",
+  REFUNDED: "Remboursee",
+};
+
+const paymentStatusLabels = {
+  PENDING: "En attente",
+  PROCESSING: "A verifier",
+  PAID: "Paye",
+  FAILED: "Echoue",
+  CANCELLED: "Annule",
+  REFUNDED: "Rembourse",
+};
+
 const selectClass = "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100";
 
 export default function OrdersPage({ user }) {
   const [profile, setProfile] = useState(user);
   const [orders, setOrders] = useState([]);
+  const [pagination, setPagination] = useState(null);
+  const [page, setPage] = useState(1);
   const [status, setStatus] = useState("");
 
   useEffect(() => {
@@ -33,14 +57,19 @@ export default function OrdersPage({ user }) {
 
   async function loadOrders() {
     if (!businessId) return;
-    setOrders(await listOrdersByBusiness(businessId, status));
+    const result = await listOrdersByBusiness(businessId, status, page);
+    setOrders(result.data || result);
+    setPagination(result.pagination || null);
   }
 
   useEffect(() => {
     loadOrders().catch(() => setOrders([]));
-  }, [businessId, status]);
+  }, [businessId, status, page]);
+
+  useEffect(() => { setPage(1); }, [status]);
 
   async function setOrderStatus(order, nextStatus, paymentStatus) {
+    if (nextStatus === "CANCELLED" && !window.confirm("Annuler cette commande ? Cette action est irreversible.")) return;
     await updateOrderStatus(order.id, {
       status: nextStatus,
       payment_status: paymentStatus || order.payment_status,
@@ -67,8 +96,8 @@ export default function OrdersPage({ user }) {
                 <p className="text-sm font-semibold text-emerald-700">{fmt(order.total_amount)} FCFA</p>
               </div>
               <div className="text-right text-sm">
-                <p className="font-semibold text-slate-700">{order.status}</p>
-                <p className="text-slate-500">Paiement : {order.payment_status}</p>
+                <p className="font-semibold text-slate-700">{statusLabels[order.status] || order.status}</p>
+                <p className="text-slate-500">Paiement : {paymentStatusLabels[order.payment_status] || order.payment_status}</p>
               </div>
             </div>
 
@@ -85,6 +114,9 @@ export default function OrdersPage({ user }) {
               <Button tone="secondary" onClick={() => setOrderStatus(order, "IN_PROGRESS")}>En cours</Button>
               <Button tone="secondary" onClick={() => setOrderStatus(order, "DELIVERED")}>Livree</Button>
               <Button onClick={() => setOrderStatus(order, "PAID", "PAID")}>Confirmer paiement</Button>
+              {order.status !== "CANCELLED" && order.status !== "DELIVERED" ? (
+                <Button tone="danger" onClick={() => setOrderStatus(order, "CANCELLED")}>Annuler</Button>
+              ) : null}
               <a href={buildCustomerWhatsAppLink(order)} target="_blank" rel="noreferrer">
                 <Button tone="secondary"><MessageCircle size={16} /> Client</Button>
               </a>
@@ -93,6 +125,14 @@ export default function OrdersPage({ user }) {
         ))}
         {!orders.length ? <p className="text-sm text-slate-500">Aucune commande trouvee.</p> : null}
       </div>
+
+      {pagination && pagination.pages > 1 ? (
+        <div className="flex items-center justify-center gap-3">
+          <Button tone="secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>Precedent</Button>
+          <span className="text-sm text-slate-600">Page {pagination.page} / {pagination.pages}</span>
+          <Button tone="secondary" disabled={page >= pagination.pages} onClick={() => setPage(page + 1)}>Suivant</Button>
+        </div>
+      ) : null}
     </div>
   );
 }
