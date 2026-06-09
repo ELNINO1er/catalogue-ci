@@ -27,7 +27,16 @@ export default function MerchantDashboardPage({ user, setView, setPublicSlug, se
   }, []);
 
   if (loading) return <PageLoading />;
-  if (!data) return <p className="p-5 text-sm text-rose-600">Impossible de charger le dashboard.</p>;
+  if (!data || !data.business) {
+    return (
+      <div className="card mx-auto mt-10 max-w-md p-8 text-center">
+        <Sparkles size={32} className="mx-auto mb-4 text-brand-400" />
+        <h2 className="font-display text-lg font-bold text-brand-800">Configurez votre boutique</h2>
+        <p className="mt-2 text-sm text-gray-500">Completez l'assistant de creation pour acceder a votre dashboard.</p>
+        <Button className="mt-6" onClick={() => setView("onboarding")}>Commencer la configuration</Button>
+      </div>
+    );
+  }
 
   const { business, subscription, stats } = data;
   const publicUrl = `${window.location.origin}/catalogue/${business.slug}`;
