@@ -150,12 +150,18 @@ export default function CheckoutModal({ business, product, slug, onClose }) {
 
   const [paymentSentLoading, setPaymentSentLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [proof, setProof] = useState({ reference: "", sender_name: "", note: "" });
 
   async function confirmPaymentSent() {
     setPaymentSentLoading(true);
     setError("");
     try {
-      const data = await markPaymentSent(createdOrder.id, { customer_phone: customer.phone });
+      const data = await markPaymentSent(createdOrder.id, {
+        customer_phone: customer.phone,
+        reference: proof.reference,
+        sender_name: proof.sender_name,
+        note: proof.note,
+      });
       setCreatedOrder(data.order);
     } catch (err) {
       setError(err.response?.data?.message || "Impossible de confirmer le paiement.");
@@ -328,6 +334,29 @@ export default function CheckoutModal({ business, product, slug, onClose }) {
                     <p className="mt-1">{settings.payment_instructions}</p>
                   </div>
                 ) : null}
+
+                <div className="mt-4 space-y-2">
+                  <p className="text-sm font-semibold text-blue-900">Preuve de paiement (optionnel)</p>
+                  <input
+                    value={proof.reference}
+                    onChange={(e) => setProof({ ...proof, reference: e.target.value })}
+                    placeholder="Reference de transaction Wave"
+                    className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400"
+                  />
+                  <input
+                    value={proof.sender_name}
+                    onChange={(e) => setProof({ ...proof, sender_name: e.target.value })}
+                    placeholder="Nom du compte Wave (expediteur)"
+                    className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400"
+                  />
+                  <textarea
+                    value={proof.note}
+                    onChange={(e) => setProof({ ...proof, note: e.target.value })}
+                    placeholder="Commentaire (optionnel)"
+                    rows={2}
+                    className="w-full resize-none rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400"
+                  />
+                </div>
 
                 {error ? <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
 

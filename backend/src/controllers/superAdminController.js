@@ -207,12 +207,30 @@ exports.updatePlatformPayment = async (req, res, next) => {
   try {
     const payment = await PlatformPayment.findByPk(req.params.id);
     if (!payment) return res.status(404).json({ success: false, message: "Paiement introuvable." });
+
+    const wasPending = payment.status !== "PAID";
     ["amount", "method", "status", "reference"].forEach((field) => {
       if (req.body[field] !== undefined) payment[field] = req.body[field];
     });
     if (req.body.status === "PAID" && !payment.paid_at) payment.paid_at = new Date();
     await payment.save();
-    await logActivity(req, { action: "UPDATE_PLATFORM_PAYMENT", module: "platform_payments", business_id: payment.business_id, details: { id: payment.id } });
+
+    // If admin confirms payment → activate corresponding subscription
+    if (wasPending && payment.status === "PAID" && payment.subscription_id) {
+      const subscription = await Subscription.findByPk(payment.subscription_id);
+      if (subscription) {
+        const now = new Date();
+        const endsAt = new Date(now);
+        endsAt.setMonth(endsAt.getMonth() + 1);
+        subscription.status = "ACTIVE";
+        subscription.starts_at = now;
+        subscription.ends_at = endsAt;
+        await subscription.save();
+      }
+    }
+    // If admin rejects payment → keep subscription as-is (merchant can retry)
+
+    await logActivity(req, { action: "UPDATE_PLATFORM_PAYMENT", module: "platform_payments", business_id: payment.business_id, details: { id: payment.id, status: payment.status } });
     res.json(payment);
   } catch (err) {
     next(err);
@@ -303,6 +321,7 @@ exports.saveSettings = async (req, res, next) => {
     const allowed = [
       "platform_name", "currency", "country", "support_email", "support_whatsapp", "maintenance_mode",
       "wave_api_key", "wave_signing_secret", "wave_webhook_secret", "wave_currency", "wave_checkout_enabled",
+      "platform_wave_number", "platform_wave_name", "platform_payment_instructions",
     ];
     let waveChanged = false;
     for (const key of allowed) {

@@ -16,6 +16,8 @@ const PlatformPayment = require("./PlatformPayment");
 const StoreTemplate = require("./StoreTemplate");
 const ActivityLog = require("./ActivityLog");
 const PlatformSetting = require("./PlatformSetting");
+const OrderStatusHistory = require("./OrderStatusHistory");
+const MessageTemplate = require("./MessageTemplate");
 
 Category.hasMany(Business, { foreignKey: "category_id", as: "businesses" });
 Business.belongsTo(Category, { foreignKey: "category_id", as: "category" });
@@ -78,6 +80,13 @@ PlatformPayment.belongsTo(Business, { foreignKey: "business_id", as: "business" 
 Subscription.hasMany(PlatformPayment, { foreignKey: "subscription_id", as: "payments" });
 PlatformPayment.belongsTo(Subscription, { foreignKey: "subscription_id", as: "subscription" });
 
+Order.hasMany(OrderStatusHistory, { foreignKey: "order_id", as: "statusHistory", onDelete: "CASCADE" });
+OrderStatusHistory.belongsTo(Order, { foreignKey: "order_id", as: "order" });
+OrderStatusHistory.belongsTo(User, { foreignKey: "changed_by_user_id", as: "changedBy" });
+
+Business.hasMany(MessageTemplate, { foreignKey: "business_id", as: "messageTemplates", onDelete: "CASCADE" });
+MessageTemplate.belongsTo(Business, { foreignKey: "business_id", as: "business" });
+
 User.hasMany(ActivityLog, { foreignKey: "user_id", as: "activityLogs" });
 ActivityLog.belongsTo(User, { foreignKey: "user_id", as: "user" });
 Business.hasMany(ActivityLog, { foreignKey: "business_id", as: "activityLogs" });
@@ -102,4 +111,6 @@ module.exports = {
   StoreTemplate,
   ActivityLog,
   PlatformSetting,
+  OrderStatusHistory,
+  MessageTemplate,
 };

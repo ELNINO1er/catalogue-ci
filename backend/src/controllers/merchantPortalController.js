@@ -7,10 +7,13 @@ const {
   OrderTracking,
   Subscription,
   Plan,
+  PlatformPayment,
   StoreTemplate,
+  PlatformSetting,
 } = require("../models");
 const { generateUniqueSlug } = require("../utils/slug");
 const { truncateText } = require("../utils/validators");
+const { getBusinessPlanInfo } = require("../services/planService");
 
 function getBusinessId(req) {
   return req.user?.business_id;
@@ -317,6 +320,142 @@ exports.listTemplates = async (req, res, next) => {
 exports.listCategories = async (req, res, next) => {
   try {
     res.json(await Category.findAll({ order: [["name", "ASC"]] }));
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── Plan & Subscription endpoints ───
+
+exports.getPlanInfo = async (req, res, next) => {
+  try {
+    const businessId = getBusinessId(req);
+    if (!businessId) return res.status(400).json({ success: false, message: "Aucune boutique associee." });
+    const info = await getBusinessPlanInfo(businessId);
+    res.json(info);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.listAvailablePlans = async (req, res, next) => {
+  try {
+    const plans = await Plan.findAll({ where: { is_active: true }, order: [["price", "ASC"]] });
+    res.json(plans);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.requestPlanChange = async (req, res, next) => {
+  try {
+    const businessId = getBusinessId(req);
+    if (!businessId) return res.status(400).json({ success: false, message: "Aucune boutique associee." });
+
+    const { plan_id } = req.body;
+    const plan = await Plan.findByPk(plan_id);
+    if (!plan || !plan.is_active) return res.status(404).json({ success: false, message: "Plan introuvable." });
+
+    // Find or create subscription for the new plan
+    let subscription = await Subscription.findOne({
+      where: { business_id: businessId },
+      order: [["created_at", "DESC"]],
+    });
+
+    if (subscription) {
+      subscription.plan_id = plan.id;
+      if (Number(plan.price) === 0) {
+        subscription.status = "ACTIVE";
+        const endsAt = new Date();
+        endsAt.setFullYear(endsAt.getFullYear() + 10);
+        subscription.ends_at = endsAt;
+        subscription.starts_at = new Date();
+      } else {
+        // Paid plan: subscription stays as-is until payment confirmed
+        if (subscription.status === "TRIAL" || subscription.status === "EXPIRED") {
+          subscription.status = "TRIAL";
+        }
+      }
+      await subscription.save();
+    } else {
+      const now = new Date();
+      const endsAt = new Date(now);
+      if (Number(plan.price) === 0) {
+        endsAt.setFullYear(endsAt.getFullYear() + 10);
+      } else {
+        endsAt.setDate(endsAt.getDate() + 7);
+      }
+      subscription = await Subscription.create({
+        business_id: businessId,
+        plan_id: plan.id,
+        status: Number(plan.price) === 0 ? "ACTIVE" : "TRIAL",
+        starts_at: now,
+        ends_at: endsAt,
+      });
+    }
+
+    // If plan is paid, create a pending platform payment
+    let payment = null;
+    if (Number(plan.price) > 0) {
+      payment = await PlatformPayment.create({
+        business_id: businessId,
+        subscription_id: subscription.id,
+        amount: plan.price,
+        method: "wave",
+        status: "PENDING",
+      });
+    }
+
+    res.json({
+      success: true,
+      subscription,
+      payment,
+      message: Number(plan.price) > 0
+        ? "Demande de changement de plan enregistree. Veuillez effectuer le paiement."
+        : "Plan mis a jour avec succes.",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.submitSubscriptionPayment = async (req, res, next) => {
+  try {
+    const businessId = getBusinessId(req);
+    if (!businessId) return res.status(400).json({ success: false, message: "Aucune boutique associee." });
+
+    const { payment_id, reference } = req.body;
+    if (!payment_id) return res.status(400).json({ success: false, message: "payment_id requis." });
+
+    const payment = await PlatformPayment.findOne({
+      where: { id: payment_id, business_id: businessId, status: "PENDING" },
+    });
+    if (!payment) return res.status(404).json({ success: false, message: "Paiement introuvable ou deja traite." });
+
+    payment.reference = truncateText(reference, 120) || null;
+    payment.status = "PENDING"; // stays pending until admin confirms
+    await payment.save();
+
+    res.json({
+      success: true,
+      payment,
+      message: "Paiement enregistre. L'administrateur va verifier et activer votre abonnement.",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getPaymentWaveInfo = async (req, res, next) => {
+  try {
+    const settings = await PlatformSetting.findAll();
+    const map = {};
+    for (const s of settings) map[s.key] = s.value;
+    res.json({
+      wave_number: map.platform_wave_number || null,
+      wave_name: map.platform_wave_name || null,
+      instructions: map.platform_payment_instructions || "Envoyez le montant exact sur le numero Wave ci-dessus, puis entrez la reference de la transaction.",
+    });
   } catch (err) {
     next(err);
   }

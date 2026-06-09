@@ -16,6 +16,7 @@ const orderRoutes = require("./routes/orderRoutes");
 const paymentSettingsRoutes = require("./routes/paymentSettingsRoutes");
 const superAdminRoutes = require("./routes/superAdminRoutes");
 const merchantPortalRoutes = require("./routes/merchantPortalRoutes");
+const onboardingRoutes = require("./routes/onboardingRoutes");
 const waveWebhookController = require("./controllers/waveWebhookController");
 
 if (!process.env.JWT_SECRET) {
@@ -70,6 +71,7 @@ app.use("/api", orderRoutes);
 app.use("/api", paymentSettingsRoutes);
 app.use("/api/super-admin", superAdminRoutes);
 app.use("/api/merchant", merchantPortalRoutes);
+app.use("/api/merchant/onboarding", onboardingRoutes);
 
 app.use((req, res) => res.status(404).json({ success: false, message: "Route introuvable." }));
 app.use(errorHandler);
@@ -90,6 +92,13 @@ async function ensureBusinessColumns() {
     { name: "display_style", sql: "VARCHAR(30) NULL AFTER `button_color`" },
     { name: "theme_mode", sql: "VARCHAR(20) NULL AFTER `display_style`" },
     { name: "font_family", sql: "VARCHAR(80) NULL AFTER `theme_mode`" },
+    { name: "text_color", sql: "VARCHAR(20) NULL AFTER `font_family`" },
+    { name: "background_color", sql: "VARCHAR(20) NULL AFTER `text_color`" },
+    { name: "business_type", sql: "VARCHAR(80) NULL AFTER `background_color`" },
+    { name: "city", sql: "VARCHAR(100) NULL AFTER `business_type`" },
+    { name: "commune", sql: "VARCHAR(100) NULL AFTER `city`" },
+    { name: "onboarding_completed", sql: "TINYINT(1) NOT NULL DEFAULT 0 AFTER `commune`" },
+    { name: "onboarding_step", sql: "INT NOT NULL DEFAULT 0 AFTER `onboarding_completed`" },
   ];
 
   for (const column of columns) {
@@ -124,6 +133,10 @@ async function ensureOrderColumns() {
     { name: "wave_launch_url", sql: "VARCHAR(500) NULL AFTER `wave_checkout_session_id`" },
     { name: "wave_transaction_id", sql: "VARCHAR(120) NULL AFTER `wave_launch_url`" },
     { name: "paid_at", sql: "DATETIME NULL AFTER `wave_transaction_id`" },
+    { name: "payment_proof_reference", sql: "VARCHAR(120) NULL AFTER `paid_at`" },
+    { name: "payment_proof_sender", sql: "VARCHAR(120) NULL AFTER `payment_proof_reference`" },
+    { name: "payment_proof_note", sql: "TEXT NULL AFTER `payment_proof_sender`" },
+    { name: "payment_proof_image", sql: "VARCHAR(500) NULL AFTER `payment_proof_note`" },
   ];
 
   for (const column of columns) {

@@ -26,6 +26,13 @@ const Business = sequelize.define(
     display_style: { type: DataTypes.STRING(30), allowNull: true },
     theme_mode: { type: DataTypes.STRING(20), allowNull: true },
     font_family: { type: DataTypes.STRING(80), allowNull: true },
+    text_color: { type: DataTypes.STRING(20), allowNull: true },
+    background_color: { type: DataTypes.STRING(20), allowNull: true },
+    business_type: { type: DataTypes.STRING(80), allowNull: true },
+    city: { type: DataTypes.STRING(100), allowNull: true },
+    commune: { type: DataTypes.STRING(100), allowNull: true },
+    onboarding_completed: { type: DataTypes.BOOLEAN, defaultValue: false },
+    onboarding_step: { type: DataTypes.INTEGER, defaultValue: 0 },
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
   },
   { tableName: "businesses" }

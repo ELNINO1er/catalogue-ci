@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import QRModal from "./components/modals/QRModal";
 import AppRoutes from "./routes/AppRoutes";
-import { getStoredUser, logout as logoutRequest } from "./services/authService";
+import { getStoredUser, logout as logoutRequest, me as fetchMe } from "./services/authService";
 
 export default function App() {
   const [user, setUser] = useState(getStoredUser());
@@ -37,9 +37,21 @@ export default function App() {
     setAuthPage(null);
   }
 
-  function handleAuth(userData) {
+  async function handleAuth(userData) {
     setUser(userData);
     setAuthPage(null);
+    // Check if merchant needs onboarding
+    if (userData.role === "MERCHANT") {
+      try {
+        const fullUser = await fetchMe();
+        if (fullUser?.business && !fullUser.business.onboarding_completed) {
+          setView("onboarding");
+          return;
+        }
+      } catch {
+        // ignore — dashboard will load
+      }
+    }
   }
 
   return (

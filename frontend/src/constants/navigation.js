@@ -41,5 +41,5 @@ export const merchantMenuItems = [
   { key: "messages", label: "Messages WhatsApp", icon: MessageCircle },
   { key: "qr-code", label: "QR Code", icon: QrCode },
   { key: "stats", label: "Statistiques", icon: BarChart3 },
-  { key: "subscription", label: "Abonnement", icon: Star },
+  { key: "plans", label: "Plans & Abonnement", icon: Star },
 ];

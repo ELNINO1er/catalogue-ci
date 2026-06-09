@@ -93,16 +93,16 @@ exports.register = async (req, res, next) => {
       is_active: true,
     });
 
-    // Auto-assign free plan if one exists
-    const freePlan = await Plan.findOne({ where: { price: 0, is_active: true } });
-    if (freePlan) {
+    // Auto-assign Trial (7 days) — use free plan or first active plan
+    const trialPlan = await Plan.findOne({ where: { is_active: true }, order: [["price", "ASC"]] });
+    if (trialPlan) {
       const now = new Date();
       const endsAt = new Date(now);
-      endsAt.setFullYear(endsAt.getFullYear() + 10);
+      endsAt.setDate(endsAt.getDate() + 7);
       await Subscription.create({
         business_id: business.id,
-        plan_id: freePlan.id,
-        status: "ACTIVE",
+        plan_id: trialPlan.id,
+        status: "TRIAL",
         starts_at: now,
         ends_at: endsAt,
       });

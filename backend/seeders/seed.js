@@ -1,7 +1,7 @@
 require("dotenv").config();
 const bcrypt = require("bcryptjs");
 const slugify = require("slugify");
-const { sequelize, User, Business, Product, Category, PaymentMethod } = require("../src/models");
+const { sequelize, User, Business, Product, Category, PaymentMethod, Plan, PlatformSetting } = require("../src/models");
 
 async function findOrCreate(Model, where, defaults = {}) {
   const existing = await Model.findOne({ where });
@@ -64,29 +64,63 @@ async function seed() {
     if (!exists) await Product.create({ ...product, business_id: business.id, is_active: true });
   }
 
-  await findOrCreate(User, { email: "dromaric58@gmail.com" }, {
-    name: "Super Admin",
-    password_hash: await bcrypt.hash("Papou1998@", 12),
-    role: "SUPER_ADMIN",
-    is_active: true,
-  });
+  // Admin credentials from .env (SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD)
+  const adminEmail = process.env.SEED_ADMIN_EMAIL;
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (!adminEmail || !adminPassword) {
+    console.warn("SEED_ADMIN_EMAIL et SEED_ADMIN_PASSWORD non definis dans .env — creation admin ignoree.");
+  } else {
+    await findOrCreate(User, { email: adminEmail }, {
+      name: "Super Admin",
+      password_hash: await bcrypt.hash(adminPassword, 12),
+      role: "SUPER_ADMIN",
+      is_active: true,
+    });
+  }
 
-  const { instance: merchant } = await findOrCreate(User, { email: "merchant@catalogueci.com" }, {
-    name: "Awa Kone",
-    password_hash: await bcrypt.hash("Merchant123@", 10),
-    role: "MERCHANT",
-    business_id: business.id,
-    is_active: true,
-  });
+  // Demo merchant from .env (optional)
+  const merchantEmail = process.env.SEED_MERCHANT_EMAIL;
+  const merchantPassword = process.env.SEED_MERCHANT_PASSWORD;
+  if (merchantEmail && merchantPassword) {
+    const { instance: merchant } = await findOrCreate(User, { email: merchantEmail }, {
+      name: "Demo Merchant",
+      password_hash: await bcrypt.hash(merchantPassword, 10),
+      role: "MERCHANT",
+      business_id: business.id,
+      is_active: true,
+    });
+    if (!merchant.business_id) {
+      merchant.business_id = business.id;
+      await merchant.save();
+    }
+  }
 
-  if (!merchant.business_id) {
-    merchant.business_id = business.id;
-    await merchant.save();
+  // Plans
+  const plansData = [
+    { name: "Starter", price: 0, product_limit: 10, order_limit: 30, features_json: JSON.stringify(["custom_fields"]) },
+    { name: "Pro", price: 5000, product_limit: 50, order_limit: 500, features_json: JSON.stringify(["custom_fields", "advanced_stats", "premium_templates"]) },
+    { name: "Business", price: 15000, product_limit: null, order_limit: null, features_json: JSON.stringify(["custom_fields", "advanced_stats", "premium_templates", "pdf_catalog", "promo_codes", "multi_staff"]) },
+  ];
+  for (const plan of plansData) {
+    await findOrCreate(Plan, { name: plan.name }, { ...plan, is_active: true });
+  }
+
+  // Platform settings for subscription payments
+  const settingsData = [
+    { key: "platform_name", value: "CatalogueCI" },
+    { key: "currency", value: "XOF" },
+    { key: "country", value: "CI" },
+    { key: "platform_wave_number", value: "2250700000000" },
+    { key: "platform_wave_name", value: "CatalogueCI SAS" },
+    { key: "platform_payment_instructions", value: "Envoyez le montant exact sur le numero Wave ci-dessus, puis entrez la reference de la transaction." },
+  ];
+  for (const setting of settingsData) {
+    await findOrCreate(PlatformSetting, { key: setting.key }, { value: setting.value });
   }
 
   console.log("Seeding termine.");
-  console.log("Admin: dromaric58@gmail.com / Papou1998@");
-  console.log("Commercant: merchant@catalogueci.com / Merchant123@");
+  if (adminEmail) console.log(`Admin: ${adminEmail}`);
+  if (merchantEmail) console.log(`Commercant: ${merchantEmail}`);
   console.log("Catalogue: /catalogue/chez-awa-food");
 }
 

@@ -4,12 +4,15 @@ const {
   CustomField,
   Order,
   OrderFieldValue,
+  OrderStatusHistory,
   MerchantPaymentSettings,
+  User,
 } = require("../models");
 const { canAccessBusiness } = require("../middleware/ownership");
 const { createCheckoutSession } = require("../services/waveService");
 const { isPositiveInteger, isValidEmail, isValidPhone, truncateText } = require("../utils/validators");
 const { logActivity } = require("../utils/activityLogger");
+const { checkOrderLimit, getBusinessSubscription } = require("../services/planService");
 
 const ORDER_STATUSES = new Set([
   "PENDING",
@@ -55,7 +58,26 @@ function orderIncludes() {
       as: "fieldValues",
       include: [{ model: CustomField, as: "field", attributes: ["id", "label", "field_type"] }],
     },
+    {
+      model: OrderStatusHistory,
+      as: "statusHistory",
+      include: [{ model: User, as: "changedBy", attributes: ["id", "name"] }],
+      order: [["created_at", "ASC"]],
+    },
   ];
+}
+
+async function recordStatusChange(order, { oldStatus, newStatus, oldPayment, newPayment, userId, actor, note }) {
+  return OrderStatusHistory.create({
+    order_id: order.id,
+    old_status: oldStatus || null,
+    new_status: newStatus || order.status,
+    old_payment_status: oldPayment || null,
+    new_payment_status: newPayment || null,
+    changed_by_user_id: userId || null,
+    actor: actor || "system",
+    note: note ? truncateText(note, 500) : null,
+  });
 }
 
 function publicOrderPayload(order) {
@@ -71,9 +93,18 @@ function publicOrderPayload(order) {
     payment_method: json.payment_method,
     wave_checkout_session_id: json.wave_checkout_session_id,
     wave_launch_url: json.wave_launch_url,
+    payment_proof_reference: json.payment_proof_reference,
+    payment_proof_sender: json.payment_proof_sender,
     created_at: json.created_at,
     product: json.product,
     fieldValues: json.fieldValues,
+    statusHistory: (json.statusHistory || []).map((h) => ({
+      status: h.new_status,
+      payment_status: h.new_payment_status,
+      actor: h.actor,
+      note: h.note,
+      created_at: h.created_at,
+    })),
   };
 }
 
@@ -93,6 +124,16 @@ exports.createPublic = async (req, res, next) => {
       include: [{ model: MerchantPaymentSettings, as: "paymentSettings" }],
     });
     if (!business) return res.status(404).json({ success: false, message: "Catalogue introuvable." });
+
+    // Check subscription & order limit
+    const sub = await getBusinessSubscription(business.id);
+    if (!sub || sub.isExpired) {
+      return res.status(403).json({ success: false, code: "STORE_INACTIVE", message: "Cette boutique n'accepte pas de commandes pour le moment." });
+    }
+    const orderLimit = await checkOrderLimit(business.id);
+    if (!orderLimit.allowed) {
+      return res.status(403).json({ success: false, code: "ORDER_LIMIT_REACHED", message: "Cette boutique a atteint sa limite de commandes mensuelles." });
+    }
 
     const { product_id, customer_name, customer_phone, customer_email, payment_method, field_values } = req.body;
     if (!isPositiveInteger(product_id)) {
@@ -142,6 +183,13 @@ exports.createPublic = async (req, res, next) => {
       status: ["wave", "wave_checkout"].includes(safePaymentMethod) ? "AWAITING_PAYMENT" : "PENDING",
       payment_status: "PENDING",
       payment_method: safePaymentMethod,
+    });
+
+    await recordStatusChange(order, {
+      newStatus: order.status,
+      newPayment: order.payment_status,
+      actor: "customer",
+      note: "Commande creee par le client.",
     });
 
     for (const field of fields) {
@@ -215,7 +263,10 @@ exports.updateStatus = async (req, res, next) => {
       return res.status(403).json({ success: false, message: "Acces refuse a cette commande." });
     }
 
-    const { status, payment_status } = req.body;
+    const oldStatus = order.status;
+    const oldPayment = order.payment_status;
+    const { status, payment_status, note } = req.body;
+
     if (status !== undefined) {
       if (!ORDER_STATUSES.has(status)) return res.status(400).json({ success: false, message: "Statut commande invalide." });
       order.status = status;
@@ -229,6 +280,17 @@ exports.updateStatus = async (req, res, next) => {
     }
 
     await order.save();
+
+    await recordStatusChange(order, {
+      oldStatus,
+      newStatus: order.status,
+      oldPayment,
+      newPayment: order.payment_status,
+      userId: req.user.id,
+      actor: "merchant",
+      note,
+    });
+
     logActivity(req, { action: "update_order_status", module: "order", business_id: order.business_id, details: { order_id: order.id, status: order.status, payment_status: order.payment_status } });
     res.json(await Order.findByPk(order.id, { include: orderIncludes() }));
   } catch (err) {
@@ -250,9 +312,29 @@ exports.markPaymentSent = async (req, res, next) => {
       return res.status(400).json({ success: false, message: "Cette commande est deja payee." });
     }
 
+    const oldStatus = order.status;
+    const oldPayment = order.payment_status;
+
+    // Save payment proof
+    if (req.body.reference) order.payment_proof_reference = truncateText(req.body.reference, 120);
+    if (req.body.sender_name) order.payment_proof_sender = truncateText(req.body.sender_name, 120);
+    if (req.body.note) order.payment_proof_note = truncateText(req.body.note, 500);
+
     order.status = "AWAITING_VERIFICATION";
     order.payment_status = "PROCESSING";
     await order.save();
+
+    await recordStatusChange(order, {
+      oldStatus,
+      newStatus: order.status,
+      oldPayment,
+      newPayment: order.payment_status,
+      actor: "customer",
+      note: order.payment_proof_reference
+        ? `Paiement envoye. Ref: ${order.payment_proof_reference}`
+        : "Le client a indique avoir effectue le paiement.",
+    });
+
     res.json({ success: true, order: publicOrderPayload(await Order.findByPk(order.id, { include: orderIncludes() })) });
   } catch (err) {
     next(err);

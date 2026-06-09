@@ -24,6 +24,8 @@ import MerchantMessagesPage from "../pages/merchant/MerchantMessagesPage";
 import MerchantQrPage from "../pages/merchant/MerchantQrPage";
 import MerchantStatsPage from "../pages/merchant/MerchantStatsPage";
 import MerchantSubscriptionPage from "../pages/merchant/MerchantSubscriptionPage";
+import MerchantPlansPage from "../pages/merchant/MerchantPlansPage";
+import OnboardingPage from "../pages/merchant/OnboardingPage";
 import PublicCataloguePage from "../pages/public/PublicCataloguePage";
 import OrderTrackingPage from "../pages/public/OrderTrackingPage";
 
@@ -60,6 +62,7 @@ export default function AppRoutes({
       return <AdminDashboardPage setPublicSlug={setPublicSlug} />;
     }
 
+    if (view === "onboarding") return null; // rendered full-screen outside layout
     if (view === "store-profile") return <MerchantBusinessPage setPublicSlug={setPublicSlug} />;
     if (view === "products") return <ProductsPage user={user} />;
     if (view === "orders") return <OrdersPage user={user} />;
@@ -67,6 +70,7 @@ export default function AppRoutes({
     if (view === "messages") return <MerchantMessagesPage />;
     if (view === "qr-code") return <MerchantQrPage setPublicSlug={setPublicSlug} setQrBusiness={setQrBusiness} />;
     if (view === "stats") return <MerchantStatsPage />;
+    if (view === "plans") return <MerchantPlansPage />;
     if (view === "subscription") return <MerchantSubscriptionPage />;
     return (
       <MerchantDashboardPage
@@ -127,6 +131,11 @@ export default function AppRoutes({
         {content}
       </AdminLayout>
     );
+  }
+
+  // Onboarding — full screen, no sidebar
+  if (view === "onboarding") {
+    return <OnboardingPage user={user} setView={setView} />;
   }
 
   return (

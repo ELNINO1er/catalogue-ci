@@ -29,3 +29,28 @@ export async function listMerchantCategories() {
   const { data } = await api.get("/merchant/categories");
   return data;
 }
+
+export async function getPlanInfo() {
+  const { data } = await api.get("/merchant/plan-info");
+  return data;
+}
+
+export async function listAvailablePlans() {
+  const { data } = await api.get("/merchant/plans");
+  return data;
+}
+
+export async function requestPlanChange(plan_id) {
+  const { data } = await api.post("/merchant/plans/change", { plan_id });
+  return data;
+}
+
+export async function submitSubscriptionPayment(payment_id, reference) {
+  const { data } = await api.post("/merchant/plans/payment", { payment_id, reference });
+  return data;
+}
+
+export async function getPaymentWaveInfo() {
+  const { data } = await api.get("/merchant/plans/wave-info");
+  return data;
+}

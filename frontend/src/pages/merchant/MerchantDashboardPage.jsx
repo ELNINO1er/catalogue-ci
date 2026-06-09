@@ -4,7 +4,8 @@ import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import StatCard from "../../components/common/StatCard";
 import { PageLoading } from "../../components/ui/LoadingSpinner";
-import { getMerchantDashboard } from "../../services/merchantService";
+import { AlertTriangle, Clock, Sparkles } from "lucide-react";
+import { getMerchantDashboard, getPlanInfo } from "../../services/merchantService";
 import { fmt } from "../../utils/formatters";
 import toast from "react-hot-toast";
 
@@ -15,11 +16,12 @@ function formatDate(value) {
 
 export default function MerchantDashboardPage({ user, setView, setPublicSlug, setQrBusiness }) {
   const [data, setData] = useState(null);
+  const [planInfo, setPlanInfo] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getMerchantDashboard()
-      .then(setData)
+    Promise.all([getMerchantDashboard(), getPlanInfo().catch(() => null)])
+      .then(([d, p]) => { setData(d); setPlanInfo(p); })
       .catch(() => setData(null))
       .finally(() => setLoading(false));
   }, []);
@@ -67,6 +69,27 @@ export default function MerchantDashboardPage({ user, setView, setPublicSlug, se
           </div>
         </div>
       </div>
+
+      {/* Trial / Expired alert */}
+      {planInfo?.isExpired ? (
+        <div className="card flex items-center gap-4 border-amber-300 bg-amber-50 p-5">
+          <AlertTriangle size={22} className="shrink-0 text-amber-500" />
+          <div className="flex-1">
+            <p className="font-semibold text-amber-800">Votre abonnement a expire</p>
+            <p className="text-sm text-amber-600">Votre boutique est limitee. Choisissez un plan pour continuer a recevoir des commandes.</p>
+          </div>
+          <Button size="sm" onClick={() => setView("plans")}>Voir les plans</Button>
+        </div>
+      ) : planInfo?.isTrial ? (
+        <div className="card flex items-center gap-4 border-brand-200 bg-brand-50 p-5">
+          <Clock size={22} className="shrink-0 text-brand-500" />
+          <div className="flex-1">
+            <p className="font-semibold text-brand-800">Periode d'essai — {planInfo.daysLeft} jour{planInfo.daysLeft > 1 ? "s" : ""} restant{planInfo.daysLeft > 1 ? "s" : ""}</p>
+            <p className="text-sm text-brand-600">Passez a un plan payant pour debloquer toutes les fonctionnalites.</p>
+          </div>
+          <Button size="sm" onClick={() => setView("plans")}>Choisir un plan</Button>
+        </div>
+      ) : null}
 
       {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
