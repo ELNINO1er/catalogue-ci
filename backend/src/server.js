@@ -34,25 +34,30 @@ if (
 
 const app = express();
 
-const allowedOrigins = new Set([
-  process.env.CLIENT_URL,
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-].filter(Boolean));
-
-function isAllowedDevLanOrigin(origin) {
-  if (process.env.NODE_ENV === "production") return false;
-  return /^http:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}):5173$/.test(origin);
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+  // In production, frontend is served by the same Express server — no CORS needed
+  // But allow the configured CLIENT_URL just in case
+  app.use(cors({
+    origin: [process.env.CLIENT_URL, "https://catalogue-ci.mhtechconsulting.com"].filter(Boolean),
+    credentials: true,
+  }));
+} else {
+  // In development, allow localhost origins
+  const devOrigins = new Set([
+    process.env.CLIENT_URL,
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+  ].filter(Boolean));
+  app.use(cors({
+    origin(origin, callback) {
+      if (!origin || devOrigins.has(origin)) return callback(null, true);
+      // Allow LAN IPs for mobile testing
+      if (/^http:\/\/(192\.168|10\.|172\.(1[6-9]|2\d|3[0-1]))\.\d{1,3}\.\d{1,3}:\d+$/.test(origin)) return callback(null, true);
+      return callback(new Error(`Origin CORS non autorisee: ${origin}`));
+    },
+  }));
 }
-
-if (process.env.NODE_ENV === "production") app.set("trust proxy", 1);
-
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.has(origin) || isAllowedDevLanOrigin(origin)) return callback(null, true);
-    return callback(new Error(`Origin CORS non autorisee: ${origin}`));
-  },
-}));
 app.post("/api/wave/webhook", express.raw({ type: "application/json" }), waveWebhookController.handle);
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
