@@ -73,7 +73,22 @@ app.use("/api/super-admin", superAdminRoutes);
 app.use("/api/merchant", merchantPortalRoutes);
 app.use("/api/merchant/onboarding", onboardingRoutes);
 
-app.use((req, res) => res.status(404).json({ success: false, message: "Route introuvable." }));
+// ─── Production: serve React frontend ───
+const frontendDist = path.join(__dirname, "../../frontend/dist");
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(frontendDist));
+}
+
+// API 404 — only for /api/* routes
+app.use("/api", (req, res) => res.status(404).json({ success: false, message: "Route API introuvable." }));
+
+// SPA fallback — serve React index.html for all other routes
+if (process.env.NODE_ENV === "production") {
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(frontendDist, "index.html"));
+  });
+}
+
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 4000;

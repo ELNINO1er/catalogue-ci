@@ -1,5 +1,4 @@
 node_modules/
-dist/
 .env
 *.log
 server.log
@@ -15,8 +14,11 @@ backend/uploads/*
 !backend/uploads/products/
 backend/uploads/products/*
 !backend/uploads/products/.gitkeep
+!backend/uploads/businesses/
+backend/uploads/businesses/*
+!backend/uploads/businesses/.gitkeep
 
 frontend/node_modules/
 frontend/.env
 frontend/.env.lan
-frontend/dist/
+# frontend/dist/ — included for production deployment
