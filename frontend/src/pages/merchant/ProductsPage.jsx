@@ -3,6 +3,7 @@ import { ImageIcon, Plus, Trash2 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import CustomFieldsEditor from "../../components/common/CustomFieldsEditor";
 import FormModal from "../../components/modals/FormModal";
+import ConfirmModal from "../../components/modals/ConfirmModal";
 import { me } from "../../services/authService";
 import { createProduct, deleteProduct, listProductsByBusiness, uploadProductImage } from "../../services/productService";
 import { fmt } from "../../utils/formatters";
@@ -25,6 +26,7 @@ export default function ProductsPage({ user }) {
   const [form, setForm] = useState(emptyForm);
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   useEffect(() => {
     me().then(setProfile).catch(() => {});
@@ -68,9 +70,10 @@ export default function ProductsPage({ user }) {
     }
   }
 
-  async function removeProduct(id) {
-    if (!window.confirm("Supprimer ce produit ? Cette action est irreversible.")) return;
-    await deleteProduct(id);
+  async function removeProduct() {
+    if (!deleteConfirm) return;
+    await deleteProduct(deleteConfirm.id);
+    setDeleteConfirm(null);
     await loadProducts();
   }
 
@@ -102,7 +105,7 @@ export default function ProductsPage({ user }) {
                 <p className="font-semibold text-slate-900">{product.name}</p>
                 <p className="text-sm text-slate-500">{product.description}</p>
               </div>
-              <Button tone="danger" onClick={() => removeProduct(product.id)} title="Supprimer">
+              <Button tone="danger" onClick={() => setDeleteConfirm(product)} title="Supprimer">
                 <Trash2 size={16} />
               </Button>
             </div>
@@ -160,6 +163,17 @@ export default function ProductsPage({ user }) {
             </div>
           </form>
         </FormModal>
+      ) : null}
+
+      {deleteConfirm ? (
+        <ConfirmModal
+          title="Supprimer le produit"
+          message={`Supprimer "${deleteConfirm.name}" ? Cette action est irreversible et supprimera aussi les champs personnalises associes.`}
+          tone="danger"
+          confirmLabel="Supprimer"
+          onConfirm={removeProduct}
+          onCancel={() => setDeleteConfirm(null)}
+        />
       ) : null}
     </div>
   );

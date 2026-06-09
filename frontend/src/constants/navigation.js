@@ -1,0 +1,45 @@
+import {
+  BarChart3,
+  Building2,
+  CreditCard,
+  FileText,
+  Grid3X3,
+  LayoutDashboard,
+  MessageCircle,
+  Package,
+  Palette,
+  QrCode,
+  Settings,
+  ShoppingBag,
+  Star,
+  Store,
+  Users,
+  Wallet,
+} from "lucide-react";
+
+export const adminMenuItems = [
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { key: "businesses", label: "Boutiques", icon: Store },
+  { key: "merchants", label: "Commercants", icon: Users },
+  { key: "plans", label: "Plans", icon: Star },
+  { key: "subscriptions", label: "Abonnements", icon: FileText },
+  { key: "platform-payments", label: "Paiements", icon: Wallet },
+  { key: "categories", label: "Categories", icon: Grid3X3 },
+  { key: "templates", label: "Templates", icon: Palette },
+  { key: "orders", label: "Commandes", icon: ShoppingBag },
+  { key: "payments", label: "Moyens de paiement", icon: CreditCard },
+  { key: "activity-logs", label: "Logs", icon: FileText },
+  { key: "settings", label: "Parametres", icon: Settings },
+];
+
+export const merchantMenuItems = [
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { key: "store-profile", label: "Ma boutique", icon: Building2 },
+  { key: "products", label: "Produits / Services", icon: Package },
+  { key: "orders", label: "Commandes", icon: ShoppingBag },
+  { key: "payment-settings", label: "Paiements", icon: CreditCard },
+  { key: "messages", label: "Messages WhatsApp", icon: MessageCircle },
+  { key: "qr-code", label: "QR Code", icon: QrCode },
+  { key: "stats", label: "Statistiques", icon: BarChart3 },
+  { key: "subscription", label: "Abonnement", icon: Star },
+];

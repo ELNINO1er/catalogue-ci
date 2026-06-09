@@ -7,6 +7,13 @@ export async function login(email, password) {
   return data.user;
 }
 
+export async function register({ name, email, password, business_name, whatsapp_number, business_category }) {
+  const { data } = await api.post("/auth/register", { name, email, password, business_name, whatsapp_number, business_category });
+  localStorage.setItem("catalogueci_token", data.token);
+  localStorage.setItem("catalogueci_user", JSON.stringify(data.user));
+  return data.user;
+}
+
 export async function me() {
   const { data } = await api.get("/auth/me");
   localStorage.setItem("catalogueci_user", JSON.stringify(data.user));

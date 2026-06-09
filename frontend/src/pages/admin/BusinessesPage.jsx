@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Edit3, Eye, PauseCircle, PlayCircle, Plus, QrCode, Search } from "lucide-react";
 import Button from "../../components/ui/Button";
 import FormModal from "../../components/modals/FormModal";
+import ConfirmModal from "../../components/modals/ConfirmModal";
 import { createBusiness, listBusinesses, updateBusiness } from "../../services/businessService";
 import { listAdminCategories, listPlans, listTemplates } from "../../services/superAdminService";
 
@@ -33,6 +34,7 @@ export default function BusinessesPage({ setPublicSlug, setQrBusiness }) {
   const [editingBusiness, setEditingBusiness] = useState(null);
   const [error, setError] = useState("");
   const [form, setForm] = useState(emptyForm);
+  const [toggleConfirm, setToggleConfirm] = useState(null);
 
   async function loadBusinesses() {
     setItems(await listBusinesses());
@@ -115,10 +117,21 @@ export default function BusinessesPage({ setPublicSlug, setQrBusiness }) {
     }
   }
 
-  async function toggleBusiness(business) {
+  function askToggle(business) {
     const action = business.is_active ? "suspendre" : "reactiver";
-    if (!window.confirm(`Voulez-vous ${action} la boutique "${business.name}" ?`)) return;
-    await updateBusiness(business.id, { is_active: !business.is_active });
+    setToggleConfirm({
+      business,
+      title: `${business.is_active ? "Suspendre" : "Reactiver"} la boutique`,
+      message: `Voulez-vous ${action} la boutique "${business.name}" ?`,
+      tone: business.is_active ? "warning" : "success",
+      confirmLabel: business.is_active ? "Suspendre" : "Reactiver",
+    });
+  }
+
+  async function executeToggle() {
+    if (!toggleConfirm) return;
+    await updateBusiness(toggleConfirm.business.id, { is_active: !toggleConfirm.business.is_active });
+    setToggleConfirm(null);
     await loadBusinesses();
   }
 
@@ -172,7 +185,7 @@ export default function BusinessesPage({ setPublicSlug, setQrBusiness }) {
               <Button tone="secondary" onClick={() => openEditModal(business)} title="Modifier la boutique">
                 <Edit3 size={16} />
               </Button>
-              <Button tone="secondary" onClick={() => toggleBusiness(business)} title={business.is_active ? "Suspendre la boutique" : "Reactiver la boutique"}>
+              <Button tone="secondary" onClick={() => askToggle(business)} title={business.is_active ? "Suspendre la boutique" : "Reactiver la boutique"}>
                 {business.is_active ? <PauseCircle size={16} /> : <PlayCircle size={16} />}
               </Button>
               <Button tone="secondary" onClick={() => setQrBusiness(business)} title="Generer le QR code">
@@ -256,6 +269,17 @@ export default function BusinessesPage({ setPublicSlug, setQrBusiness }) {
             </div>
           </form>
         </FormModal>
+      ) : null}
+
+      {toggleConfirm ? (
+        <ConfirmModal
+          title={toggleConfirm.title}
+          message={toggleConfirm.message}
+          tone={toggleConfirm.tone}
+          confirmLabel={toggleConfirm.confirmLabel}
+          onConfirm={executeToggle}
+          onCancel={() => setToggleConfirm(null)}
+        />
       ) : null}
     </div>
   );

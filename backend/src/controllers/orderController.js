@@ -223,6 +223,9 @@ exports.updateStatus = async (req, res, next) => {
     if (payment_status !== undefined) {
       if (!PAYMENT_STATUSES.has(payment_status)) return res.status(400).json({ success: false, message: "Statut paiement invalide." });
       order.payment_status = payment_status;
+      if (payment_status === "PAID" && !order.paid_at) {
+        order.paid_at = new Date();
+      }
     }
 
     await order.save();

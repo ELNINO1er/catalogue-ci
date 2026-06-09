@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import AdminLayout from "../layouts/AdminLayout";
 import MerchantLayout from "../layouts/MerchantLayout";
 import LoginPage from "../pages/auth/LoginPage";
+import RegisterPage from "../pages/auth/RegisterPage";
+import LandingPage from "../pages/landing/LandingPage";
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage";
 import BusinessesPage from "../pages/admin/BusinessesPage";
 import MerchantsPage from "../pages/admin/MerchantsPage";
@@ -29,13 +31,15 @@ export default function AppRoutes({
   user,
   view,
   setView,
-  onLogin,
+  onAuth,
   onLogout,
   publicSlug,
   setPublicSlug,
   publicPage,
   setPublicPage,
   setQrBusiness,
+  authPage,
+  setAuthPage,
 }) {
   const content = useMemo(() => {
     if (!user) return null;
@@ -74,6 +78,7 @@ export default function AppRoutes({
     );
   }, [user, view, setView, setPublicSlug, setQrBusiness]);
 
+  // Public pages first
   if (publicPage === "track-order") {
     return <OrderTrackingPage onBack={() => setPublicPage(null)} />;
   }
@@ -89,8 +94,33 @@ export default function AppRoutes({
     );
   }
 
-  if (!user) return <LoginPage onLogin={onLogin} />;
+  // Auth pages
+  if (!user) {
+    if (authPage === "register") {
+      return (
+        <RegisterPage
+          onRegister={onAuth}
+          onGoLogin={() => setAuthPage("login")}
+        />
+      );
+    }
+    if (authPage === "login") {
+      return (
+        <LoginPage
+          onLogin={onAuth}
+          onGoRegister={() => setAuthPage("register")}
+        />
+      );
+    }
+    return (
+      <LandingPage
+        onLogin={() => setAuthPage("login")}
+        onRegister={() => setAuthPage("register")}
+      />
+    );
+  }
 
+  // Dashboards
   if (user.role === "SUPER_ADMIN") {
     return (
       <AdminLayout user={user} view={view} setView={setView} onLogout={onLogout}>

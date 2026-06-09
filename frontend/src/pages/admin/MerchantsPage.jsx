@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Edit3, PauseCircle, PlayCircle, Plus } from "lucide-react";
 import Button from "../../components/ui/Button";
 import FormModal from "../../components/modals/FormModal";
+import ConfirmModal from "../../components/modals/ConfirmModal";
 import { createMerchant, listBusinesses, listMerchants, toggleMerchant, updateMerchant } from "../../services/businessService";
 
 const emptyForm = {
@@ -18,6 +19,7 @@ export default function MerchantsPage() {
   const [editingMerchant, setEditingMerchant] = useState(null);
   const [error, setError] = useState("");
   const [form, setForm] = useState(emptyForm);
+  const [toggleConfirm, setToggleConfirm] = useState(null);
 
   async function load() {
     const [merchants, businessList] = await Promise.all([listMerchants(), listBusinesses()]);
@@ -82,10 +84,21 @@ export default function MerchantsPage() {
     }
   }
 
-  async function setMerchantActive(merchant, isActive) {
+  function askToggle(merchant, isActive) {
     const action = isActive ? "reactiver" : "suspendre";
-    if (!window.confirm(`Voulez-vous ${action} le compte de "${merchant.name}" ?`)) return;
-    await toggleMerchant(merchant.id, isActive);
+    setToggleConfirm({
+      merchant, isActive,
+      title: `${isActive ? "Reactiver" : "Suspendre"} le compte`,
+      message: `Voulez-vous ${action} le compte de "${merchant.name}" ?`,
+      tone: isActive ? "success" : "warning",
+      confirmLabel: isActive ? "Reactiver" : "Suspendre",
+    });
+  }
+
+  async function executeToggle() {
+    if (!toggleConfirm) return;
+    await toggleMerchant(toggleConfirm.merchant.id, toggleConfirm.isActive);
+    setToggleConfirm(null);
     await load();
   }
 
@@ -120,11 +133,11 @@ export default function MerchantsPage() {
                 <Edit3 size={16} />
               </Button>
               {merchant.is_active ? (
-                <Button tone="secondary" onClick={() => setMerchantActive(merchant, false)} title="Suspendre la connexion">
+                <Button tone="secondary" onClick={() => askToggle(merchant, false)} title="Suspendre la connexion">
                   <PauseCircle size={16} />
                 </Button>
               ) : (
-                <Button tone="secondary" onClick={() => setMerchantActive(merchant, true)} title="Reactiver la connexion">
+                <Button tone="secondary" onClick={() => askToggle(merchant, true)} title="Reactiver la connexion">
                   <PlayCircle size={16} />
                 </Button>
               )}
@@ -177,6 +190,17 @@ export default function MerchantsPage() {
             </div>
           </form>
         </FormModal>
+      ) : null}
+
+      {toggleConfirm ? (
+        <ConfirmModal
+          title={toggleConfirm.title}
+          message={toggleConfirm.message}
+          tone={toggleConfirm.tone}
+          confirmLabel={toggleConfirm.confirmLabel}
+          onConfirm={executeToggle}
+          onCancel={() => setToggleConfirm(null)}
+        />
       ) : null}
     </div>
   );

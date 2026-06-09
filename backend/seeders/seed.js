@@ -64,9 +64,9 @@ async function seed() {
     if (!exists) await Product.create({ ...product, business_id: business.id, is_active: true });
   }
 
-  await findOrCreate(User, { email: "admin@catalogueci.com" }, {
+  await findOrCreate(User, { email: "dromaric58@gmail.com" }, {
     name: "Super Admin",
-    password_hash: await bcrypt.hash("Admin123@", 10),
+    password_hash: await bcrypt.hash("Papou1998@", 12),
     role: "SUPER_ADMIN",
     is_active: true,
   });
@@ -85,7 +85,7 @@ async function seed() {
   }
 
   console.log("Seeding termine.");
-  console.log("Admin: admin@catalogueci.com / Admin123@");
+  console.log("Admin: dromaric58@gmail.com / Papou1998@");
   console.log("Commercant: merchant@catalogueci.com / Merchant123@");
   console.log("Catalogue: /catalogue/chez-awa-food");
 }

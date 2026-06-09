@@ -2,28 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  background: #f6f7f9;
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply m-0 bg-surface font-sans text-brand-700;
+  }
+
+  button, input, select, textarea {
+    font: inherit;
+  }
+
+  ::selection {
+    @apply bg-brand-500 text-white;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-1.5;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-brand-200;
+  }
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
+@layer components {
+  .input-base {
+    @apply w-full rounded-xl border border-surface-border bg-white px-4 py-3 text-sm text-brand-700 outline-none transition-all duration-200
+      placeholder:text-gray-400
+      focus:border-brand-400 focus:ring-2 focus:ring-brand-100;
+  }
 
-select {
-  accent-color: #059669;
-}
+  .card {
+    @apply rounded-2xl border border-surface-border bg-white shadow-card transition-shadow duration-200;
+  }
 
-select:focus {
-  border-color: #059669;
-  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.14);
-}
-
-select option:checked {
-  background: #059669;
-  color: #ffffff;
+  .card-hover {
+    @apply card hover:shadow-card-hover;
+  }
 }

@@ -6,6 +6,7 @@ import { getStoredUser, logout as logoutRequest } from "./services/authService";
 export default function App() {
   const [user, setUser] = useState(getStoredUser());
   const [view, setView] = useState("dashboard");
+  const [authPage, setAuthPage] = useState(null); // null = landing, "login", "register"
   const [publicSlug, setPublicSlug] = useState(() => {
     const match = window.location.pathname.match(/^\/catalogue\/([^/]+)/);
     return match?.[1] || null;
@@ -20,15 +21,25 @@ export default function App() {
       window.history.replaceState(null, "", "/suivi-commande");
     } else if (publicSlug) {
       window.history.replaceState(null, "", `/catalogue/${publicSlug}`);
-    } else {
+    } else if (authPage === "login") {
+      window.history.replaceState(null, "", "/login");
+    } else if (authPage === "register") {
+      window.history.replaceState(null, "", "/inscription");
+    } else if (!user) {
       window.history.replaceState(null, "", "/");
     }
-  }, [publicSlug]);
+  }, [publicSlug, publicPage, authPage, user]);
 
   function handleLogout() {
     logoutRequest();
     setUser(null);
     setView("dashboard");
+    setAuthPage(null);
+  }
+
+  function handleAuth(userData) {
+    setUser(userData);
+    setAuthPage(null);
   }
 
   return (
@@ -37,13 +48,15 @@ export default function App() {
         user={user}
         view={view}
         setView={setView}
-        onLogin={setUser}
+        onAuth={handleAuth}
         onLogout={handleLogout}
         publicSlug={publicSlug}
         setPublicSlug={setPublicSlug}
         publicPage={publicPage}
         setPublicPage={setPublicPage}
         setQrBusiness={setQrBusiness}
+        authPage={authPage}
+        setAuthPage={setAuthPage}
       />
       {qrBusiness ? <QRModal business={qrBusiness} onClose={() => setQrBusiness(null)} /> : null}
     </>
