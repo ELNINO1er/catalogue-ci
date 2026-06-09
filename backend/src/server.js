@@ -59,6 +59,62 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
+// One-time setup endpoint — run seed remotely (remove after first use)
+app.get("/api/setup-seed", async (req, res) => {
+  try {
+    const bcrypt = require("bcryptjs");
+    const { User, Category, PaymentMethod, Plan, PlatformSetting } = require("./models");
+    const slugify = require("slugify");
+
+    // Check if already seeded
+    const existing = await User.findOne({ where: { role: "SUPER_ADMIN" } });
+    if (existing) return res.json({ message: "Deja initialise. Supprimez cette route." });
+
+    // Categories
+    for (const name of ["Restaurant", "Boutique", "Salon", "Service", "Autre"]) {
+      const slug = slugify(name, { lower: true, strict: true });
+      await Category.findOrCreate({ where: { slug }, defaults: { name, slug } });
+    }
+
+    // Plans
+    const plansData = [
+      { name: "Starter", price: 0, product_limit: 10, order_limit: 30, features_json: JSON.stringify(["custom_fields"]) },
+      { name: "Pro", price: 5000, product_limit: 50, order_limit: 500, features_json: JSON.stringify(["custom_fields", "advanced_stats", "premium_templates"]) },
+      { name: "Business", price: 15000, product_limit: null, order_limit: null, features_json: JSON.stringify(["custom_fields", "advanced_stats", "premium_templates", "pdf_catalog", "promo_codes", "multi_staff"]) },
+    ];
+    for (const p of plansData) {
+      await Plan.findOrCreate({ where: { name: p.name }, defaults: { ...p, is_active: true } });
+    }
+
+    // Platform settings
+    const settings = [
+      { key: "platform_name", value: "CatalogueCI" },
+      { key: "currency", value: "XOF" },
+      { key: "country", value: "CI" },
+    ];
+    for (const s of settings) {
+      await PlatformSetting.findOrCreate({ where: { key: s.key }, defaults: { value: s.value } });
+    }
+
+    // Admin user
+    const email = process.env.SEED_ADMIN_EMAIL;
+    const password = process.env.SEED_ADMIN_PASSWORD;
+    if (!email || !password) return res.status(400).json({ message: "SEED_ADMIN_EMAIL et SEED_ADMIN_PASSWORD requis dans les variables." });
+
+    await User.create({
+      name: "Super Admin",
+      email,
+      password_hash: await bcrypt.hash(password, 12),
+      role: "SUPER_ADMIN",
+      is_active: true,
+    });
+
+    res.json({ success: true, message: "Seed termine ! Admin cree. SUPPRIMEZ cette route maintenant." });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/businesses", businessRoutes);
 app.use("/api/public", publicRoutes);
