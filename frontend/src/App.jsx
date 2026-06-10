@@ -40,20 +40,14 @@ export default function App() {
   async function handleAuth(userData) {
     setUser(userData);
     setAuthPage(null);
-    // New merchants always go to onboarding first
     if (userData.role === "MERCHANT") {
       try {
-        const res = await fetch("/api/auth/me", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("catalogueci_token")}` },
-        });
-        const { user: fullUser } = await res.json();
+        const fullUser = await fetchMe();
         if (fullUser?.business && !fullUser.business.onboarding_completed) {
           setView("onboarding");
           return;
         }
       } catch {
-        // If me() fails, check if this looks like a new registration (no business_id initially)
-        // New registrations should go to onboarding
         setView("onboarding");
         return;
       }
