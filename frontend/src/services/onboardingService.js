@@ -1,39 +1,66 @@
-import api from "./api";
+function authHeaders() {
+  const token = localStorage.getItem("catalogueci_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function apiFetch(url, options = {}) {
+  const res = await fetch(`/api${url}`, {
+    ...options,
+    headers: { ...authHeaders(), ...options.headers },
+  });
+  const data = await res.json();
+  if (!res.ok) throw { response: { data } };
+  return data;
+}
 
 export async function getOnboardingData() {
-  const { data } = await api.get("/merchant/onboarding");
-  return data;
+  return apiFetch("/merchant/onboarding");
 }
 
 export async function saveOnboardingStep(step, data) {
-  const { data: result } = await api.put("/merchant/onboarding/step", { step, data });
-  return result;
+  return apiFetch("/merchant/onboarding/step", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ step, data }),
+  });
 }
 
 export async function completeOnboarding() {
-  const { data } = await api.post("/merchant/onboarding/complete");
-  return data;
+  return apiFetch("/merchant/onboarding/complete", { method: "POST" });
 }
 
 export async function createQuickProducts(products) {
-  const { data } = await api.post("/merchant/onboarding/quick-products", { products });
-  return data;
+  return apiFetch("/merchant/onboarding/quick-products", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ products }),
+  });
 }
 
 export async function uploadBusinessImage(file) {
   const formData = new FormData();
   formData.append("image", file);
-  const { data } = await api.post("/merchant/onboarding/upload-image", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
+  const token = localStorage.getItem("catalogueci_token");
+  const res = await fetch("/api/merchant/onboarding/upload-image", {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
   });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Erreur upload");
   return data.image_url;
 }
 
 export async function uploadOnboardingProductImage(file) {
   const formData = new FormData();
   formData.append("image", file);
-  const { data } = await api.post("/merchant/onboarding/upload-product-image", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
+  const token = localStorage.getItem("catalogueci_token");
+  const res = await fetch("/api/merchant/onboarding/upload-product-image", {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
   });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Erreur upload");
   return data.image_url;
 }

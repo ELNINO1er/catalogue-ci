@@ -205,13 +205,22 @@ export default function OnboardingPage({ user, setView }) {
   return (
     <div className="min-h-screen bg-surface">
       {/* Progress bar */}
-      <div className="sticky top-0 z-20 border-b border-surface-border bg-white px-4 py-3">
-        <div className="mx-auto flex max-w-4xl items-center gap-4">
-          <div className="hidden items-center gap-2 sm:flex">
-            <ShoppingBag size={18} className="text-brand-500" />
-            <span className="font-display text-sm font-bold text-brand-700">CatalogueCI</span>
+      <div className="sticky top-0 z-20 border-b border-surface-border bg-white">
+        <div className="mx-auto max-w-4xl px-4 py-3">
+          {/* Top row: logo + step counter */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShoppingBag size={18} className="text-brand-500" />
+              <span className="font-display text-sm font-bold text-brand-700">CatalogueCI</span>
+            </div>
+            <span className="text-sm font-medium text-gray-500">Etape {step} sur 10</span>
           </div>
-          <div className="flex flex-1 items-center gap-1 overflow-x-auto">
+          {/* Progress bar visual */}
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface">
+            <div className="h-full rounded-full bg-brand-500 transition-all duration-500" style={{ width: `${(step / 10) * 100}%` }} />
+          </div>
+          {/* Step labels - scrollable */}
+          <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-1">
             {STEPS.map((s) => {
               const Icon = s.icon;
               const done = step > s.id;
@@ -220,15 +229,14 @@ export default function OnboardingPage({ user, setView }) {
                 <button
                   key={s.id}
                   onClick={() => s.id <= (biz.onboarding_step || 0) + 1 && setStep(s.id)}
-                  className={`flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium transition ${active ? "bg-brand-500 text-white" : done ? "bg-brand-100 text-brand-700" : "text-gray-400"}`}
+                  className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium transition ${active ? "bg-brand-500 text-white shadow-sm" : done ? "bg-brand-50 text-brand-600" : "text-gray-400 hover:bg-surface"}`}
                 >
                   {done ? <Check size={12} /> : <Icon size={12} />}
-                  <span className="hidden lg:inline">{s.label}</span>
+                  {s.label}
                 </button>
               );
             })}
           </div>
-          <span className="shrink-0 text-xs text-gray-400">{step}/10</span>
         </div>
       </div>
 
