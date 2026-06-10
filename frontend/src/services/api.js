@@ -13,6 +13,18 @@ function getToken() {
   return localStorage.getItem("catalogueci_token");
 }
 
+function buildUrl(url, params) {
+  if (!params || typeof params !== "object") return `${BASE_URL}${url}`;
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== "") {
+      query.set(key, value);
+    }
+  }
+  const qs = query.toString();
+  return qs ? `${BASE_URL}${url}?${qs}` : `${BASE_URL}${url}`;
+}
+
 async function request(method, url, body, options = {}) {
   const token = getToken();
   const headers = {};
@@ -25,9 +37,22 @@ async function request(method, url, body, options = {}) {
     headers["Content-Type"] = "application/json";
   }
 
-  const res = await fetch(`${BASE_URL}${url}`, {
+  // Build URL with query params if provided (axios compatibility)
+  const fullUrl = buildUrl(url, options.params);
+
+  // Merge headers but strip Content-Type for FormData
+  const mergedHeaders = { ...headers };
+  if (options.headers) {
+    for (const [key, value] of Object.entries(options.headers)) {
+      // Skip Content-Type for FormData uploads
+      if (isFormData && key.toLowerCase() === "content-type") continue;
+      mergedHeaders[key] = value;
+    }
+  }
+
+  const res = await fetch(fullUrl, {
     method,
-    headers: { ...headers, ...options.headers },
+    headers: mergedHeaders,
     body: isFormData ? body : body ? JSON.stringify(body) : undefined,
   });
 
@@ -45,7 +70,6 @@ async function request(method, url, body, options = {}) {
     throw error;
   }
 
-  // Return axios-compatible { data } shape
   return { data };
 }
 
