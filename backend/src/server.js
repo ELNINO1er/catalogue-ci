@@ -1,5 +1,7 @@
-// .env du dossier backend, quel que soit le dossier de lancement (racine sur Hostinger)
+// Variables : backend/.env (local), puis .env du dossier de lancement (Hostinger l'ecrit a la racine).
+// dotenv ne remplace jamais une variable deja definie.
 require("dotenv").config({ path: require("path").join(__dirname, "../.env") });
+require("dotenv").config();
 
 if (!process.env.JWT_SECRET) {
   console.error("Configuration invalide : JWT_SECRET est obligatoire.");
