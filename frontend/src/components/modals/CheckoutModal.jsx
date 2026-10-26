@@ -297,6 +297,11 @@ export default function CheckoutModal({ business, product, slug, onClose }) {
 
             {error ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
 
+            <p className="text-xs leading-relaxed text-ink-500">
+              Vos coordonnees sont transmises a {business.name} pour traiter votre commande.{" "}
+              <a href="/confidentialite" target="_blank" rel="noreferrer" className="font-semibold text-brand-600 underline">En savoir plus</a>
+            </p>
+
             <Button type="submit" className="w-full py-3" disabled={loading}>
               {loading ? "Envoi de la commande..." : "Creer la commande"}
             </Button>

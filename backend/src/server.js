@@ -1,103 +1,25 @@
 require("dotenv").config();
-const express = require("express");
-const cors = require("cors");
-const path = require("path");
-const { sequelize } = require("./models");
-const errorHandler = require("./middleware/errorHandler");
-const authRoutes = require("./routes/authRoutes");
-const businessRoutes = require("./routes/businessRoutes");
-const publicRoutes = require("./routes/publicRoutes");
-const productRoutes = require("./routes/productRoutes");
-const merchantRoutes = require("./routes/merchantRoutes");
-const paymentRoutes = require("./routes/paymentRoutes");
-const trackingRoutes = require("./routes/trackingRoutes");
-const customFieldRoutes = require("./routes/customFieldRoutes");
-const orderRoutes = require("./routes/orderRoutes");
-const paymentSettingsRoutes = require("./routes/paymentSettingsRoutes");
-const superAdminRoutes = require("./routes/superAdminRoutes");
-const merchantPortalRoutes = require("./routes/merchantPortalRoutes");
-const onboardingRoutes = require("./routes/onboardingRoutes");
-const waveWebhookController = require("./controllers/waveWebhookController");
 
 if (!process.env.JWT_SECRET) {
   console.error("Configuration invalide : JWT_SECRET est obligatoire.");
   process.exit(1);
 }
 
-if (
-  process.env.NODE_ENV === "production" &&
-  process.env.JWT_SECRET.length < 32
-) {
-  console.error("Configuration invalide : JWT_SECRET doit contenir au moins 32 caracteres en production.");
-  process.exit(1);
-}
-
-const app = express();
-
 if (process.env.NODE_ENV === "production") {
-  app.set("trust proxy", 1);
-  // In production, frontend is served by the same Express server — no CORS needed
-  // But allow the configured CLIENT_URL just in case
-  app.use(cors({
-    origin: [process.env.CLIENT_URL, "https://catalogue-ci.mhtechconsulting.com"].filter(Boolean),
-    credentials: true,
-  }));
-} else {
-  // In development, allow localhost origins
-  const devOrigins = new Set([
-    process.env.CLIENT_URL,
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-  ].filter(Boolean));
-  app.use(cors({
-    origin(origin, callback) {
-      if (!origin || devOrigins.has(origin)) return callback(null, true);
-      // Vite change de port (5174, 5175...) si 5173 est deja pris
-      if (/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) return callback(null, true);
-      // Allow LAN IPs for mobile testing
-      if (/^http:\/\/(192\.168|10\.|172\.(1[6-9]|2\d|3[0-1]))\.\d{1,3}\.\d{1,3}:\d+$/.test(origin)) return callback(null, true);
-      return callback(new Error(`Origin CORS non autorisee: ${origin}`));
-    },
-  }));
-}
-app.post("/api/wave/webhook", express.raw({ type: "application/json" }), waveWebhookController.handle);
-app.use(express.json());
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
-
-app.get("/api/health", (req, res) => res.json({ status: "ok" }));
-
-
-app.use("/api/auth", authRoutes);
-app.use("/api/businesses", businessRoutes);
-app.use("/api/public", publicRoutes);
-app.use("/api", productRoutes);
-app.use("/api/merchants", merchantRoutes);
-app.use("/api/payment-methods", paymentRoutes);
-app.use("/api", trackingRoutes);
-app.use("/api", customFieldRoutes);
-app.use("/api", orderRoutes);
-app.use("/api", paymentSettingsRoutes);
-app.use("/api/super-admin", superAdminRoutes);
-app.use("/api/merchant", merchantPortalRoutes);
-app.use("/api/merchant/onboarding", onboardingRoutes);
-
-// ─── Production: serve React frontend ───
-const frontendDist = path.join(__dirname, "../public");
-if (process.env.NODE_ENV === "production") {
-  app.use(express.static(frontendDist));
+  const problems = [];
+  if (process.env.JWT_SECRET.length < 32) problems.push("JWT_SECRET doit contenir au moins 32 caracteres.");
+  if (/changez_moi/i.test(process.env.JWT_SECRET)) problems.push("JWT_SECRET est encore la valeur d'exemple.");
+  if (!process.env.PUBLIC_APP_URL) problems.push("PUBLIC_APP_URL est obligatoire (liens des emails et retour Wave).");
+  if (!process.env.DB_PASSWORD) problems.push("DB_PASSWORD est vide.");
+  if (problems.length) {
+    console.error(`Configuration de production invalide :\n- ${problems.join("\n- ")}`);
+    process.exit(1);
+  }
 }
 
-// API 404 — only for /api/* routes
-app.use("/api", (req, res) => res.status(404).json({ success: false, message: "Route API introuvable." }));
+const app = require("./app");
+const { sequelize } = require("./models");
 
-// SPA fallback — serve React index.html for all other routes
-if (process.env.NODE_ENV === "production") {
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(frontendDist, "index.html"));
-  });
-}
-
-app.use(errorHandler);
 
 const PORT = process.env.PORT || 4000;
 
@@ -142,6 +64,12 @@ const EXTRA_COLUMNS = {
   ],
   platform_payments: [
     { name: "plan_id", sql: "INT NULL AFTER `subscription_id`" },
+  ],
+  users: [
+    { name: "reset_token_hash", sql: "VARCHAR(64) NULL AFTER `is_active`" },
+    { name: "reset_token_expires_at", sql: "DATETIME NULL AFTER `reset_token_hash`" },
+    { name: "password_changed_at", sql: "DATETIME NULL AFTER `reset_token_expires_at`" },
+    { name: "terms_accepted_at", sql: "DATETIME NULL AFTER `password_changed_at`" },
   ],
 };
 

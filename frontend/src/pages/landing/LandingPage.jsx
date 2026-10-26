@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { navigate } from "../../utils/navigation";
 import {
   ArrowRight,
   BarChart3,
@@ -364,6 +365,8 @@ function Footer() {
             <p><a href="#features" className="hover:text-brand-600">Fonctionnalites</a></p>
             <p><a href="#pricing" className="hover:text-brand-600">Tarifs</a></p>
             <p><a href="#faq" className="hover:text-brand-600">FAQ</a></p>
+            <p><a href="/cgu" onClick={(e) => { e.preventDefault(); navigate("/cgu"); window.scrollTo(0, 0); }} className="hover:text-brand-600">Conditions d'utilisation</a></p>
+            <p><a href="/confidentialite" onClick={(e) => { e.preventDefault(); navigate("/confidentialite"); window.scrollTo(0, 0); }} className="hover:text-brand-600">Confidentialite</a></p>
           </div>
         </div>
         <div>

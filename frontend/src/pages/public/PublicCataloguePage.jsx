@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { navigate } from "../../utils/navigation";
 import { ArrowLeft, Clock, CreditCard, MapPin, MessageCircle, Phone, QrCode, Search, Share2, ShoppingBag, Truck, Waves, X } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
@@ -323,6 +324,11 @@ export default function PublicCataloguePage({ slug, onBack, setPublicPage, setQr
         {/* Footer */}
         <footer className="mt-8 text-center text-xs text-gray-400">
           <p>Propulse par <span className="font-semibold text-brand-500">CatalogueCI</span></p>
+          <p className="mt-1">
+            <a href="/cgu" onClick={(e) => { e.preventDefault(); navigate("/cgu"); window.scrollTo(0, 0); }} className="hover:text-brand-600">Conditions d'utilisation</a>
+            {" · "}
+            <a href="/confidentialite" onClick={(e) => { e.preventDefault(); navigate("/confidentialite"); window.scrollTo(0, 0); }} className="hover:text-brand-600">Confidentialite</a>
+          </p>
         </footer>
       </div>
 

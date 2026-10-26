@@ -12,7 +12,7 @@ const features = [
   { icon: Star, text: "Dashboard et statistiques" },
 ];
 
-export default function LoginPage({ onLogin, onGoRegister }) {
+export default function LoginPage({ onLogin, onGoRegister, onForgot }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -95,7 +95,10 @@ export default function LoginPage({ onLogin, onGoRegister }) {
             />
 
             <div className="grid gap-1.5">
-              <span className="text-sm font-semibold text-ink-700">Mot de passe</span>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-ink-700">Mot de passe</span>
+                <button type="button" onClick={onForgot} className="text-xs font-semibold text-brand-600 hover:underline">Mot de passe oublie ?</button>
+              </div>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}

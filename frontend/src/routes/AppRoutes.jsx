@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import AdminLayout from "../layouts/AdminLayout";
 import MerchantLayout from "../layouts/MerchantLayout";
 import LoginPage from "../pages/auth/LoginPage";
+import { ForgotPasswordPage, ResetPasswordPage } from "../pages/auth/PasswordResetPages";
+import LegalPage from "../pages/public/LegalPage";
 import RegisterPage from "../pages/auth/RegisterPage";
 import LandingPage from "../pages/landing/LandingPage";
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage";
@@ -85,6 +87,12 @@ export default function AppRoutes({
     return <OrderTrackingPage onBack={() => setPublicPage(null)} />;
   }
 
+  if (publicPage === "cgu" || publicPage === "privacy") {
+    // Retour a la page precedente (inscription, catalogue...) ou a l'accueil.
+    const back = () => (window.history.length > 1 ? window.history.back() : setPublicPage(null));
+    return <LegalPage doc={publicPage} onBack={back} />;
+  }
+
   if (publicSlug) {
     return (
       <PublicCataloguePage
@@ -106,11 +114,14 @@ export default function AppRoutes({
         />
       );
     }
+    if (authPage === "forgot") return <ForgotPasswordPage onBack={() => setAuthPage("login")} />;
+    if (authPage === "reset") return <ResetPasswordPage onBack={() => setAuthPage("login")} />;
     if (authPage === "login") {
       return (
         <LoginPage
           onLogin={onAuth}
           onGoRegister={() => setAuthPage("register")}
+          onForgot={() => setAuthPage("forgot")}
         />
       );
     }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { navigate } from "../../utils/navigation";
 import { ArrowLeft, Check, Eye, EyeOff, MessageCircle, QrCode, ShoppingBag, Smartphone, Star, UserPlus } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
@@ -28,6 +29,7 @@ export default function RegisterPage({ onRegister, onGoLogin }) {
     business_name: "",
     whatsapp_number: "",
     business_category: "",
+    accept_terms: false,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -204,7 +206,23 @@ export default function RegisterPage({ onRegister, onGoLogin }) {
               </div>
             ) : null}
 
-            <Button type="submit" size="lg" className="w-full" disabled={loading || !allValid}>
+            <label className="flex items-start gap-2.5 rounded-xl border border-surface-border bg-white px-4 py-3 text-sm text-ink-600">
+              <input
+                type="checkbox"
+                required
+                checked={form.accept_terms}
+                onChange={(e) => update("accept_terms", e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-brand-500"
+              />
+              <span>
+                J'accepte les{" "}
+                <a href="/cgu" onClick={(e) => { e.preventDefault(); navigate("/cgu"); }} className="font-semibold text-brand-600 underline">conditions d'utilisation</a>
+                {" "}et la{" "}
+                <a href="/confidentialite" onClick={(e) => { e.preventDefault(); navigate("/confidentialite"); }} className="font-semibold text-brand-600 underline">politique de confidentialite</a>.
+              </span>
+            </label>
+
+            <Button type="submit" size="lg" className="w-full" disabled={loading || !allValid || !form.accept_terms}>
               {loading ? <LoadingSpinner size="sm" className="text-white" /> : <UserPlus size={18} />}
               {loading ? "Creation en cours..." : "Creer ma boutique gratuitement"}
             </Button>

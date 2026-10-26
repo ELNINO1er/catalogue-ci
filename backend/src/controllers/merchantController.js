@@ -91,6 +91,7 @@ exports.update = async (req, res, next) => {
         return res.status(400).json({ success: false, message: passwordError });
       }
       user.password_hash = await bcrypt.hash(password, 10);
+      user.password_changed_at = new Date();
     }
 
     await user.save();

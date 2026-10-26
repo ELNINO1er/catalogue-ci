@@ -1,11 +1,18 @@
+const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const slugify = require("slugify");
 const { Op } = require("sequelize");
 const { sequelize, User, Business, Subscription, Plan } = require("../models");
-const { signToken } = require("../utils/jwt");
+const { signUserToken } = require("../utils/jwt");
 const { validatePasswordStrength } = require("../utils/passwordPolicy");
 const { isValidEmail, isValidPhone, truncateText } = require("../utils/validators");
-const { notifyAdminNewMerchant, sendWelcomeEmail } = require("../services/emailService");
+const { notifyAdminNewMerchant, sendWelcomeEmail, sendPasswordResetEmail } = require("../services/emailService");
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+
+function hashToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
 
 exports.login = async (req, res, next) => {
   try {
@@ -29,7 +36,7 @@ exports.login = async (req, res, next) => {
       }
     }
 
-    const token = signToken({ id: user.id, role: user.role });
+    const token = signUserToken(user);
     return res.json({
       token,
       user: {
@@ -47,11 +54,14 @@ exports.login = async (req, res, next) => {
 
 exports.register = async (req, res, next) => {
   try {
-    const { name, email, password, business_name, whatsapp_number, business_category } = req.body;
+    const { name, email, password, business_name, whatsapp_number, business_category, accept_terms } = req.body;
 
     // Validation
     if (!name || !email || !password || !business_name || !whatsapp_number) {
       return res.status(400).json({ message: "Tous les champs obligatoires doivent etre remplis." });
+    }
+    if (accept_terms !== true) {
+      return res.status(400).json({ message: "Vous devez accepter les conditions d'utilisation et la politique de confidentialite." });
     }
 
     if (!isValidEmail(email)) {
@@ -100,6 +110,7 @@ exports.register = async (req, res, next) => {
         role: "MERCHANT",
         business_id: business.id,
         is_active: true,
+        terms_accepted_at: new Date(),
       }, { transaction });
 
       // Essai de 7 jours sur le premier plan payant ; sans plan payant, plan gratuit sans expiration.
@@ -139,7 +150,7 @@ exports.register = async (req, res, next) => {
     });
 
     // Auto-login
-    const token = signToken({ id: user.id, role: user.role });
+    const token = signUserToken(user);
     return res.status(201).json({
       token,
       user: {
@@ -150,6 +161,60 @@ exports.register = async (req, res, next) => {
         business_id: business.id,
       },
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Reponse identique que l'email existe ou non : on ne revele pas qui a un compte.
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    const generic = { success: true, message: "Si un compte existe pour cet email, un lien de reinitialisation vient d'etre envoye." };
+    if (!isValidEmail(email)) return res.json(generic);
+
+    const user = await User.findOne({ where: { email } });
+    if (!user || !user.is_active) return res.json(generic);
+
+    const token = crypto.randomBytes(32).toString("hex");
+    user.reset_token_hash = hashToken(token);
+    user.reset_token_expires_at = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+    await user.save();
+
+    const appUrl = (process.env.PUBLIC_APP_URL || process.env.CLIENT_URL || "").replace(/\/$/, "");
+    sendPasswordResetEmail({
+      name: user.name,
+      email: user.email,
+      resetUrl: `${appUrl}/reinitialiser-mot-de-passe?token=${token}`,
+    }).catch((err) => console.error("Erreur envoi email reinitialisation:", err.message));
+
+    return res.json(generic);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.resetPassword = async (req, res, next) => {
+  try {
+    const { token, password } = req.body;
+    if (typeof token !== "string" || !/^[a-f0-9]{64}$/.test(token)) {
+      return res.status(400).json({ message: "Lien invalide ou expire. Refaites une demande." });
+    }
+    const passwordError = validatePasswordStrength(password);
+    if (passwordError) return res.status(400).json({ message: passwordError });
+
+    const user = await User.findOne({ where: { reset_token_hash: hashToken(token) } });
+    if (!user || !user.reset_token_expires_at || new Date(user.reset_token_expires_at) < new Date()) {
+      return res.status(400).json({ message: "Lien invalide ou expire. Refaites une demande." });
+    }
+
+    user.password_hash = await bcrypt.hash(password, 12);
+    user.reset_token_hash = null;
+    user.reset_token_expires_at = null;
+    user.password_changed_at = new Date();
+    await user.save();
+
+    return res.json({ success: true, message: "Mot de passe modifie. Vous pouvez vous connecter." });
   } catch (err) {
     next(err);
   }
