@@ -80,6 +80,13 @@ export default {
         "fade-in": "fadeIn 0.2s ease-out",
         "slide-up": "slideUp 0.25s ease-out",
         "slide-in-right": "slideInRight 0.3s ease-out",
+        // Landing page
+        float: "float 6s ease-in-out infinite",
+        "float-slow": "float 8s ease-in-out infinite",
+        "pop-in": "popIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both",
+        "fade-up": "fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) both",
+        draw: "draw 1.1s cubic-bezier(0.65, 0, 0.35, 1) 0.6s both",
+        wiggle: "wiggle 2.6s ease-in-out infinite",
       },
       keyframes: {
         fadeIn: {
@@ -93,6 +100,26 @@ export default {
         slideInRight: {
           "0%": { opacity: "0", transform: "translateX(-12px)" },
           "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-12px)" },
+        },
+        popIn: {
+          "0%": { opacity: "0", transform: "scale(0.4)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+        fadeUp: {
+          "0%": { opacity: "0", transform: "translateY(24px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        draw: {
+          "0%": { strokeDashoffset: "1" },
+          "100%": { strokeDashoffset: "0" },
+        },
+        wiggle: {
+          "0%, 100%": { transform: "rotate(-6deg)" },
+          "50%": { transform: "rotate(6deg)" },
         },
       },
     },

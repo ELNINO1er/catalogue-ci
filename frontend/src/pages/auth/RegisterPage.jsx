@@ -22,15 +22,16 @@ const passwordRules = [
 ];
 
 export default function RegisterPage({ onRegister, onGoLogin }) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => ({
     name: "",
     email: "",
     password: "",
-    business_name: "",
+    // Nom saisi sur la page d'accueil (/inscription?boutique=...)
+    business_name: new URLSearchParams(window.location.search).get("boutique")?.slice(0, 150) || "",
     whatsapp_number: "",
     business_category: "",
     accept_terms: false,
-  });
+  }));
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
