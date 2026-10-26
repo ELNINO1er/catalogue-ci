@@ -1,24 +1,27 @@
 #!/bin/bash
-# Script de deploiement CatalogueCI pour Hostinger Cloud
+# Prepare CatalogueCI pour le deploiement (Hostinger). Voir docs/DEPLOIEMENT.md.
 set -e
+cd "$(dirname "$0")"
 
-echo "=== Build Frontend ==="
-cd frontend
-npm install
-VITE_API_URL=/api npm run build
-echo "Frontend build OK -> frontend/dist/"
-
-echo ""
-echo "=== Install Backend ==="
-cd ../backend
-npm install --production
-echo "Backend dependencies OK"
+echo "=== Tests de l'API ==="
+npm --prefix backend install
+npm --prefix backend test
 
 echo ""
-echo "=== Deploiement pret ==="
-echo "Structure a uploader sur Hostinger :"
-echo "  backend/       (tout le dossier)"
-echo "  frontend/dist/ (seulement le build)"
+echo "=== Build du frontend ==="
+npm --prefix frontend install
+(cd frontend && VITE_API_URL=/api npx vite build)
+
 echo ""
-echo "Point d'entree Node.js : backend/src/server.js"
-echo "Variables .env a configurer sur Hostinger"
+echo "=== Copie du build dans backend/public (servi par Express en production) ==="
+rm -rf backend/public
+mkdir -p backend/public
+cp -r frontend/dist/. backend/public/
+
+echo ""
+echo "=== Dependances de production ==="
+npm --prefix backend install --omit=dev
+
+echo ""
+echo "Pret. Dossier a envoyer sur l'hebergeur : backend/ (avec public/)."
+echo "Point d'entree Node.js : backend/src/server.js — variables a definir : voir backend/.env.example"

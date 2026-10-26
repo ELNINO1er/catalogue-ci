@@ -6,14 +6,11 @@ const {
   MessageTemplate,
   Product,
   CustomField,
-  Subscription,
-  Plan,
 } = require("../models");
-const { truncateText, isValidPhone, isValidEmail } = require("../utils/validators");
+const { truncateText, isValidPhone, isValidEmail, isSafeUrl, isHexColor } = require("../utils/validators");
+const { checkProductLimit, getBusinessSubscription } = require("../services/planService");
 
-const HEX_RE = /^#[0-9A-Fa-f]{3,8}$/;
-const URL_RE = /^https?:\/\/.+/i;
-const SAFE_URL = (v) => v && URL_RE.test(v) && !v.toLowerCase().includes("javascript:");
+const FIELD_TYPES = new Set(["text", "textarea", "number", "phone", "email", "date", "time", "select", "checkbox", "radio", "file", "address"]);
 
 function getBusinessId(req) {
   return req.user?.business_id;
@@ -73,6 +70,9 @@ exports.saveStep = async (req, res, next) => {
         if (data.category_id) business.category_id = Number(data.category_id) || null;
         if (data.city !== undefined) business.city = truncateText(data.city, 100);
         if (data.commune !== undefined) business.commune = truncateText(data.commune, 100);
+        if ((data.logo_url && !isSafeUrl(data.logo_url)) || (data.banner_url && !isSafeUrl(data.banner_url))) {
+          return res.status(400).json({ success: false, message: "Lien d'image invalide." });
+        }
         if (data.logo_url !== undefined) business.logo_url = data.logo_url ? truncateText(data.logo_url, 500) : null;
         if (data.banner_url !== undefined) business.banner_url = data.banner_url ? truncateText(data.banner_url, 500) : null;
         break;
@@ -86,6 +86,7 @@ exports.saveStep = async (req, res, next) => {
           if (!isValidPhone(data.whatsapp_number)) return res.status(400).json({ success: false, message: "Numero WhatsApp invalide." });
           business.whatsapp_number = truncateText(data.whatsapp_number, 20);
         }
+        if (data.phone_number && !isValidPhone(data.phone_number)) return res.status(400).json({ success: false, message: "Numero de telephone invalide." });
         if (data.phone_number !== undefined) business.phone_number = truncateText(data.phone_number, 20) || null;
         if (data.email !== undefined) {
           if (data.email && !isValidEmail(data.email)) return res.status(400).json({ success: false, message: "Email invalide." });
@@ -93,25 +94,40 @@ exports.saveStep = async (req, res, next) => {
         }
         if (data.address !== undefined) business.address = truncateText(data.address, 255) || null;
         if (data.google_maps_url !== undefined) {
-          if (data.google_maps_url && !SAFE_URL(data.google_maps_url)) return res.status(400).json({ success: false, message: "URL Google Maps invalide." });
+          if (data.google_maps_url && !isSafeUrl(data.google_maps_url)) return res.status(400).json({ success: false, message: "URL Google Maps invalide." });
           business.google_maps_url = data.google_maps_url ? truncateText(data.google_maps_url, 500) : null;
         }
         if (data.opening_hours !== undefined) business.opening_hours = truncateText(data.opening_hours, 255) || null;
         break;
 
       case 5: // Payment
+        if (data.wave_phone_number && !isValidPhone(data.wave_phone_number)) {
+          return res.status(400).json({ success: false, message: "Numero Wave invalide." });
+        }
         await savePaymentSettings(businessId, data);
         break;
 
       case 6: // Design
-        if (data.primary_color && HEX_RE.test(data.primary_color)) business.primary_color = data.primary_color;
-        if (data.secondary_color && HEX_RE.test(data.secondary_color)) business.secondary_color = data.secondary_color;
-        if (data.button_color && HEX_RE.test(data.button_color)) business.button_color = data.button_color;
-        if (data.text_color && HEX_RE.test(data.text_color)) business.text_color = data.text_color;
-        if (data.background_color && HEX_RE.test(data.background_color)) business.background_color = data.background_color;
+        if (data.primary_color && isHexColor(data.primary_color)) business.primary_color = data.primary_color;
+        if (data.secondary_color && isHexColor(data.secondary_color)) business.secondary_color = data.secondary_color;
+        if (data.button_color && isHexColor(data.button_color)) business.button_color = data.button_color;
+        if (data.text_color && isHexColor(data.text_color)) business.text_color = data.text_color;
+        if (data.background_color && isHexColor(data.background_color)) business.background_color = data.background_color;
         if (data.font_family) business.font_family = truncateText(data.font_family, 80);
         if (data.theme_mode) business.theme_mode = truncateText(data.theme_mode, 20);
-        if (data.template_id !== undefined) business.template_id = Number(data.template_id) || null;
+        if (data.template_id !== undefined) {
+          const templateId = Number(data.template_id) || null;
+          if (templateId) {
+            const template = await StoreTemplate.findByPk(templateId);
+            if (!template || !template.is_active) return res.status(400).json({ success: false, message: "Template invalide." });
+            if (template.is_premium) {
+              const sub = await getBusinessSubscription(businessId);
+              const allowed = sub && !sub.isExpired && (sub.freeMode || Number(sub.plan?.price || 0) > 0);
+              if (!allowed) return res.status(403).json({ success: false, message: "Ce template est reserve aux plans payants." });
+            }
+          }
+          business.template_id = templateId;
+        }
         if (data.display_style) business.display_style = truncateText(data.display_style, 30);
         break;
 
@@ -155,9 +171,9 @@ exports.complete = async (req, res, next) => {
     const business = await Business.findByPk(businessId);
     if (!business) return res.status(404).json({ success: false, message: "Boutique introuvable." });
 
+    // is_active n'est pas touche : une boutique suspendue par l'admin ne doit pas pouvoir se reactiver ici.
     business.onboarding_completed = true;
     business.onboarding_step = 10;
-    business.is_active = true;
     await business.save();
 
     res.json({ success: true, business, slug: business.slug });
@@ -180,6 +196,10 @@ exports.quickProducts = async (req, res, next) => {
     const created = [];
     for (const p of products.slice(0, 5)) {
       if (!p.name || p.price === undefined) continue;
+      if (p.image_url && !isSafeUrl(p.image_url)) continue;
+
+      const limit = await checkProductLimit(businessId);
+      if (!limit.allowed) break;
 
       const product = await Product.create({
         business_id: businessId,
@@ -196,14 +216,14 @@ exports.quickProducts = async (req, res, next) => {
       if (Array.isArray(p.suggested_fields)) {
         for (let i = 0; i < Math.min(p.suggested_fields.length, 10); i++) {
           const f = p.suggested_fields[i];
-          if (!f.label || !f.field_type) continue;
+          if (!f.label || !FIELD_TYPES.has(f.field_type)) continue;
           await CustomField.create({
             business_id: businessId,
             product_id: product.id,
             label: truncateText(f.label, 150),
             field_type: f.field_type,
             options_json: f.options ? JSON.stringify(f.options) : null,
-            is_required: f.is_required || false,
+            is_required: Boolean(f.is_required),
             sort_order: i,
           });
         }

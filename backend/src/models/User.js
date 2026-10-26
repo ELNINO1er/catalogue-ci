@@ -18,8 +18,23 @@ const User = sequelize.define(
     },
     business_id: { type: DataTypes.INTEGER, allowNull: true },
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
+    // Mot de passe oublie : seul le hash SHA-256 du jeton est stocke.
+    reset_token_hash: { type: DataTypes.STRING(64), allowNull: true },
+    reset_token_expires_at: { type: DataTypes.DATE, allowNull: true },
+    // Les jetons de connexion emis avant cette date sont refuses.
+    password_changed_at: { type: DataTypes.DATE, allowNull: true },
+    terms_accepted_at: { type: DataTypes.DATE, allowNull: true },
   },
   { tableName: "users" }
 );
+
+// Jamais de secret dans une reponse JSON, quelle que soit la route.
+User.prototype.toJSON = function toJSON() {
+  const values = { ...this.get() };
+  delete values.password_hash;
+  delete values.reset_token_hash;
+  delete values.reset_token_expires_at;
+  return values;
+};
 
 module.exports = User;

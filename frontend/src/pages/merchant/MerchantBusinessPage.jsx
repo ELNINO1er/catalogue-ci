@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
-import { Edit3, Eye, MapPin, Palette, Store } from "lucide-react";
+import { Edit3, Eye, FileText, MapPin, Palette, Phone, ShoppingBag, Store } from "lucide-react";
 import Button from "../../components/ui/Button";
+import { PageLoading } from "../../components/ui/LoadingSpinner";
+import Input, { Select, Textarea } from "../../components/ui/Input";
 import FormModal from "../../components/modals/FormModal";
+import { MetaRow, PageHeader, StatusPill } from "../../components/ui/PageKit";
 import { getMerchantBusiness, listMerchantCategories, listMerchantTemplates, updateMerchantBusiness } from "../../services/merchantService";
+import { mediaUrl } from "../../utils/media";
 
 const emptyForm = {
   name: "",
@@ -25,8 +29,63 @@ const emptyForm = {
   display_style: "grid",
 };
 
-const inputClass = "rounded-lg border border-slate-300 px-3 py-2 font-normal outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100";
-const selectClass = `${inputClass} bg-white text-slate-800 accent-emerald-600`;
+function Section({ icon: Icon, title, children, className = "" }) {
+  return (
+    <section className={`card p-5 ${className}`}>
+      <h2 className="mb-3 flex items-center gap-2 font-display text-base font-bold text-ink-900">
+        <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-50 text-brand-600"><Icon size={16} /></span>
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function FormSection({ title, children }) {
+  return (
+    <fieldset className="grid gap-4 md:grid-cols-2">
+      <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-400 md:col-span-2">{title}</legend>
+      {children}
+    </fieldset>
+  );
+}
+
+function ColorField({ label, value, onChange }) {
+  return (
+    <label className="grid gap-1.5">
+      <span className="text-sm font-semibold text-ink-700">{label}</span>
+      <span className="flex items-center gap-3 rounded-xl border border-surface-border bg-white px-3 py-2">
+        <input type="color" value={value} onChange={onChange} aria-label={label} className="h-8 w-10 cursor-pointer rounded border-0 bg-transparent p-0" />
+        <span className="font-mono text-sm text-ink-600">{value}</span>
+      </span>
+    </label>
+  );
+}
+
+// Apercu du haut du catalogue public avec les couleurs choisies.
+function StorePreview({ data, categoryName }) {
+  const primary = data.primary_color || "#2f855a";
+  const button = data.button_color || "#2f855a";
+  return (
+    <div className="overflow-hidden rounded-2xl border border-surface-border">
+      <div className="relative h-28" style={{ backgroundColor: primary }}>
+        {data.banner_url ? <img src={mediaUrl(data.banner_url)} alt="" className="h-full w-full object-cover opacity-40" /> : null}
+      </div>
+      <div className="-mt-8 px-5 pb-5">
+        <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-2xl border-4 border-white bg-white text-white shadow-card" style={{ backgroundColor: data.logo_url ? "#fff" : primary }}>
+          {data.logo_url ? <img src={mediaUrl(data.logo_url)} alt={`Logo ${data.name}`} className="h-full w-full object-cover" /> : <Store size={24} />}
+        </div>
+        <p className="mt-3 font-display text-lg font-bold text-ink-900">{data.name || "Nom de la boutique"}</p>
+        <p className="text-xs text-ink-500">{categoryName || "Sans categorie"}</p>
+        <p className="mt-2 line-clamp-2 text-sm text-ink-600">{data.welcome_message || data.description || "Ajoutez un message d'accueil pour vos clients."}</p>
+        <div className="mt-4 flex items-center justify-between rounded-xl bg-surface p-3">
+          <span className="text-sm font-medium text-ink-700">Exemple de produit</span>
+          <span className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ backgroundColor: button }}>Commander</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function MerchantBusinessPage({ setPublicSlug }) {
   const [business, setBusiness] = useState(null);
@@ -81,96 +140,152 @@ export default function MerchantBusinessPage({ setPublicSlug }) {
     }
   }
 
-  if (!business && !error) return <p className="p-5 text-sm text-slate-500">Chargement de la boutique...</p>;
+  if (!business && !error) return <PageLoading message="Chargement de la boutique..." />;
+
+  const field = (key) => ({ value: form[key] || "", onChange: (e) => setForm({ ...form, [key]: e.target.value }) });
+  const formCategory = categories.find((c) => String(c.id) === String(form.category_id))?.name;
 
   return (
-    <div className="space-y-5 p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Ma boutique</h1>
-          <p className="mt-1 text-sm text-slate-500">Modifiez les informations publiques depuis une modale.</p>
-        </div>
-        <div className="flex gap-2">
-          {business?.slug ? (
-            <Button tone="secondary" onClick={() => setPublicSlug?.(business.slug)}><Eye size={16} /> Voir</Button>
-          ) : null}
-          <Button onClick={() => setModalOpen(true)}><Edit3 size={16} /> Modifier</Button>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Ma boutique"
+        description="Les informations ci-dessous apparaissent sur votre catalogue public."
+        actions={(
+          <>
+            {business?.slug ? (
+              <Button tone="secondary" onClick={() => setPublicSlug?.(business.slug)}><Eye size={16} /> Voir ma boutique</Button>
+            ) : null}
+            <Button onClick={() => setModalOpen(true)} disabled={!business}><Edit3 size={16} /> Modifier</Button>
+          </>
+        )}
+      />
 
-      {error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
-      {saved ? <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">Boutique enregistree.</p> : null}
+      {error && !modalOpen ? <p role="alert" className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
+      {saved ? <p role="status" className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">Boutique enregistree.</p> : null}
 
       {business ? (
-        <div className="grid gap-4 lg:grid-cols-3">
-          <section className="rounded-lg border border-slate-200 bg-white p-4 lg:col-span-2">
-            {business.banner_url ? <img src={business.banner_url} alt="" className="mb-4 h-44 w-full rounded-lg object-cover" /> : null}
-            <div className="flex items-start gap-3">
-              <div className="grid h-14 w-14 place-items-center rounded-lg bg-emerald-600 text-white">
-                {business.logo_url ? <img src={business.logo_url} alt={business.name} className="h-full w-full rounded-lg object-cover" /> : <Store size={24} />}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <Section icon={Store} title="Identite">
+              <div className="flex items-start gap-4">
+                <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-brand-500 text-white">
+                  {business.logo_url ? <img src={mediaUrl(business.logo_url)} alt={`Logo ${business.name}`} className="h-full w-full object-cover" /> : <Store size={24} />}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-display text-lg font-bold text-ink-900">{business.name}</p>
+                    <StatusPill tone={business.is_active ? "success" : "danger"}>{business.is_active ? "En ligne" : "Suspendue"}</StatusPill>
+                  </div>
+                  <p className="text-sm text-ink-500">{business.category?.name || "Sans categorie"} · /catalogue/{business.slug}</p>
+                  <p className="mt-2 text-sm text-ink-600">{business.description || "Aucune description."}</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">{business.name}</h2>
-                <p className="text-sm text-slate-500">{business.category?.name || "Sans categorie"}</p>
-                <p className="mt-2 text-sm text-slate-600">{business.description || "Aucune description."}</p>
-              </div>
+            </Section>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <Section icon={Phone} title="Contact">
+                <div className="divide-y divide-surface-border">
+                  <MetaRow label="WhatsApp">{business.whatsapp_number}</MetaRow>
+                  <MetaRow label="Telephone">{business.phone_number || "Non renseigne"}</MetaRow>
+                  <MetaRow label="Email">{business.email || "Non renseigne"}</MetaRow>
+                  <MetaRow label="Horaires">{business.opening_hours || "Non renseignes"}</MetaRow>
+                </div>
+                <p className="mt-3 flex items-start gap-2 rounded-xl bg-surface px-3 py-2.5 text-sm text-ink-600">
+                  <MapPin size={16} className="mt-0.5 shrink-0 text-brand-500" /> {business.address || "Adresse non renseignee"}
+                </p>
+              </Section>
+
+              <Section icon={Palette} title="Apparence">
+                <div className="divide-y divide-surface-border">
+                  <MetaRow label="Template">{business.template?.name || "Par defaut"}</MetaRow>
+                  <MetaRow label="Affichage">{business.display_style === "list" ? "Liste" : "Grille"}</MetaRow>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  {[["Principale", business.primary_color], ["Boutons", business.button_color]].map(([label, color]) => (
+                    <div key={label} className="flex items-center gap-2 rounded-xl bg-surface px-3 py-2.5">
+                      <span className="h-7 w-7 shrink-0 rounded-lg border border-white shadow-card" style={{ backgroundColor: color || "#2f855a" }} />
+                      <span className="min-w-0">
+                        <span className="block text-xs text-ink-500">{label}</span>
+                        <span className="block truncate font-mono text-xs text-ink-800">{color || "#2f855a"}</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </Section>
             </div>
-          </section>
-          <section className="rounded-lg border border-slate-200 bg-white p-4">
-            <h2 className="mb-3 font-bold text-slate-900">Contact</h2>
-            <div className="space-y-2 text-sm text-slate-600">
-              <p><strong>WhatsApp :</strong> {business.whatsapp_number}</p>
-              <p><strong>Telephone :</strong> {business.phone_number || "Non renseigne"}</p>
-              <p><strong>Email :</strong> {business.email || "Non renseigne"}</p>
-              <p className="flex gap-2"><MapPin size={16} /> {business.address || "Adresse non renseignee"}</p>
-            </div>
-          </section>
-          <section className="rounded-lg border border-slate-200 bg-white p-4">
-            <h2 className="mb-3 flex items-center gap-2 font-bold text-slate-900"><Palette size={18} /> Design</h2>
-            <div className="space-y-2 text-sm text-slate-600">
-              <p><strong>Template :</strong> {business.template?.name || "Template par defaut"}</p>
-              <p><strong>Affichage :</strong> {business.display_style === "list" ? "Liste" : "Grille"}</p>
-              <div className="flex gap-2">
-                <span className="h-8 w-8 rounded-lg border" style={{ backgroundColor: business.primary_color || "#2f855a" }} />
-                <span className="h-8 w-8 rounded-lg border" style={{ backgroundColor: business.button_color || "#2f855a" }} />
-              </div>
-            </div>
-          </section>
-          <section className="rounded-lg border border-slate-200 bg-white p-4 lg:col-span-2">
-            <h2 className="mb-3 font-bold text-slate-900">Messages et conditions</h2>
-            <div className="space-y-2 text-sm text-slate-600">
-              <p><strong>Accueil :</strong> {business.welcome_message || "Non renseigne"}</p>
-              <p><strong>Conditions :</strong> {business.terms_text || "Non renseigne"}</p>
-              <p><strong>Livraison :</strong> {business.delivery_policy || "Non renseigne"}</p>
-            </div>
-          </section>
+
+            <Section icon={FileText} title="Textes et conditions">
+              <dl className="grid gap-3 md:grid-cols-3">
+                {[
+                  ["Message d'accueil", business.welcome_message],
+                  ["Conditions de vente", business.terms_text],
+                  ["Livraison", business.delivery_policy],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-xl bg-surface p-3">
+                    <dt className="text-xs font-semibold text-ink-500">{label}</dt>
+                    <dd className="mt-1 text-sm text-ink-700">{value || "Non renseigne"}</dd>
+                  </div>
+                ))}
+              </dl>
+            </Section>
+          </div>
+
+          <Section icon={ShoppingBag} title="Apercu du catalogue" className="self-start">
+            <StorePreview data={business} categoryName={business.category?.name} />
+          </Section>
         </div>
       ) : null}
 
       {modalOpen ? (
         <FormModal title="Modifier ma boutique" description="Ces informations apparaissent sur votre catalogue public." onClose={() => setModalOpen(false)}>
-          <form onSubmit={save} className="grid gap-4">
-            <div className="grid gap-3 md:grid-cols-2">
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">Nom de la boutique<input value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputClass} required /></label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">Categorie<select value={form.category_id || ""} onChange={(e) => setForm({ ...form, category_id: e.target.value })} className={selectClass}><option value="">Sans categorie</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">WhatsApp<input value={form.whatsapp_number || ""} onChange={(e) => setForm({ ...form, whatsapp_number: e.target.value })} className={inputClass} required /></label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">Telephone<input value={form.phone_number || ""} onChange={(e) => setForm({ ...form, phone_number: e.target.value })} className={inputClass} /></label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">Email boutique<input type="email" value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputClass} /></label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">Horaires<input value={form.opening_hours || ""} onChange={(e) => setForm({ ...form, opening_hours: e.target.value })} className={inputClass} /></label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700 md:col-span-2">Adresse<input value={form.address || ""} onChange={(e) => setForm({ ...form, address: e.target.value })} className={inputClass} /></label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700 md:col-span-2">Description<textarea value={form.description || ""} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} className={`${inputClass} resize-none`} /></label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">Template<select value={form.template_id || ""} onChange={(e) => setForm({ ...form, template_id: e.target.value })} className={selectClass}><option value="">Template par defaut</option>{templates.map((template) => <option key={template.id} value={template.id}>{template.name}{template.is_premium ? " - Premium" : ""}</option>)}</select></label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">Affichage produits<select value={form.display_style || "grid"} onChange={(e) => setForm({ ...form, display_style: e.target.value })} className={selectClass}><option value="grid">Grille</option><option value="list">Liste</option></select></label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">Couleur principale<input type="color" value={form.primary_color || "#2f855a"} onChange={(e) => setForm({ ...form, primary_color: e.target.value })} className="h-10 rounded-lg border px-2" /></label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">Couleur boutons<input type="color" value={form.button_color || "#2f855a"} onChange={(e) => setForm({ ...form, button_color: e.target.value })} className="h-10 rounded-lg border px-2" /></label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">Logo URL<input value={form.logo_url || ""} onChange={(e) => setForm({ ...form, logo_url: e.target.value })} className={inputClass} /></label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">Banniere URL<input value={form.banner_url || ""} onChange={(e) => setForm({ ...form, banner_url: e.target.value })} className={inputClass} /></label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700 md:col-span-2">Message d'accueil<textarea value={form.welcome_message || ""} onChange={(e) => setForm({ ...form, welcome_message: e.target.value })} rows={3} className={`${inputClass} resize-none`} /></label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700 md:col-span-2">Conditions de vente<textarea value={form.terms_text || ""} onChange={(e) => setForm({ ...form, terms_text: e.target.value })} rows={3} className={`${inputClass} resize-none`} /></label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700 md:col-span-2">Politique de livraison<textarea value={form.delivery_policy || ""} onChange={(e) => setForm({ ...form, delivery_policy: e.target.value })} rows={3} className={`${inputClass} resize-none`} /></label>
+          <form onSubmit={save} className="grid gap-6">
+            <FormSection title="Identite">
+              <Input label="Nom de la boutique" required {...field("name")} />
+              <Select label="Categorie" {...field("category_id")}>
+                <option value="">Sans categorie</option>
+                {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+              </Select>
+              <Input label="Logo (URL)" {...field("logo_url")} />
+              <Input label="Banniere (URL)" {...field("banner_url")} />
+              <div className="md:col-span-2"><Textarea label="Description" rows={3} {...field("description")} /></div>
+            </FormSection>
+
+            <FormSection title="Contact">
+              <Input label="WhatsApp" required {...field("whatsapp_number")} />
+              <Input label="Telephone" {...field("phone_number")} />
+              <Input label="Email boutique" type="email" {...field("email")} />
+              <Input label="Horaires" {...field("opening_hours")} />
+              <div className="md:col-span-2"><Input label="Adresse" {...field("address")} /></div>
+            </FormSection>
+
+            <FormSection title="Apparence">
+              <Select label="Template" {...field("template_id")}>
+                <option value="">Template par defaut</option>
+                {templates.map((template) => <option key={template.id} value={template.id}>{template.name}{template.is_premium ? " · Premium" : ""}</option>)}
+              </Select>
+              <Select label="Affichage produits" value={form.display_style || "grid"} onChange={(e) => setForm({ ...form, display_style: e.target.value })}>
+                <option value="grid">Grille</option>
+                <option value="list">Liste</option>
+              </Select>
+              <ColorField label="Couleur principale" value={form.primary_color || "#2f855a"} onChange={(e) => setForm({ ...form, primary_color: e.target.value })} />
+              <ColorField label="Couleur boutons" value={form.button_color || "#2f855a"} onChange={(e) => setForm({ ...form, button_color: e.target.value })} />
+              <div className="md:col-span-2">
+                <p className="mb-2 text-sm font-semibold text-ink-700">Apercu</p>
+                <StorePreview data={form} categoryName={formCategory} />
+              </div>
+            </FormSection>
+
+            <FormSection title="Textes">
+              <div className="md:col-span-2"><Textarea label="Message d'accueil" rows={3} {...field("welcome_message")} /></div>
+              <div className="md:col-span-2"><Textarea label="Conditions de vente" rows={3} {...field("terms_text")} /></div>
+              <div className="md:col-span-2"><Textarea label="Politique de livraison" rows={3} {...field("delivery_policy")} /></div>
+            </FormSection>
+
+            {error ? <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
+            <div className="flex justify-end gap-2 border-t border-surface-border pt-4">
+              <Button tone="secondary" onClick={() => setModalOpen(false)}>Annuler</Button>
+              <Button type="submit">Enregistrer</Button>
             </div>
-            {error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
-            <div className="flex justify-end gap-2"><Button tone="secondary" onClick={() => setModalOpen(false)}>Annuler</Button><Button type="submit">Enregistrer</Button></div>
           </form>
         </FormModal>
       ) : null}

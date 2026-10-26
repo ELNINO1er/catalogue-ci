@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import AdminLayout from "../layouts/AdminLayout";
 import MerchantLayout from "../layouts/MerchantLayout";
 import LoginPage from "../pages/auth/LoginPage";
+import { ForgotPasswordPage, ResetPasswordPage } from "../pages/auth/PasswordResetPages";
+import LegalPage from "../pages/public/LegalPage";
 import RegisterPage from "../pages/auth/RegisterPage";
 import LandingPage from "../pages/landing/LandingPage";
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage";
@@ -23,7 +25,6 @@ import PaymentSettingsPage from "../pages/merchant/PaymentSettingsPage";
 import MerchantMessagesPage from "../pages/merchant/MerchantMessagesPage";
 import MerchantQrPage from "../pages/merchant/MerchantQrPage";
 import MerchantStatsPage from "../pages/merchant/MerchantStatsPage";
-import MerchantSubscriptionPage from "../pages/merchant/MerchantSubscriptionPage";
 import MerchantPlansPage from "../pages/merchant/MerchantPlansPage";
 import OnboardingPage from "../pages/merchant/OnboardingPage";
 import PublicCataloguePage from "../pages/public/PublicCataloguePage";
@@ -59,7 +60,7 @@ export default function AppRoutes({
       if (view === "activity-logs") return <ActivityLogsPage />;
       if (view === "payment-settings") return <PaymentSettingsPage user={user} />;
       if (view === "settings") return <PlatformSettingsPage />;
-      return <AdminDashboardPage setPublicSlug={setPublicSlug} />;
+      return <AdminDashboardPage user={user} setView={setView} setPublicSlug={setPublicSlug} />;
     }
 
     if (view === "onboarding") return null; // rendered full-screen outside layout
@@ -70,8 +71,7 @@ export default function AppRoutes({
     if (view === "messages") return <MerchantMessagesPage />;
     if (view === "qr-code") return <MerchantQrPage setPublicSlug={setPublicSlug} setQrBusiness={setQrBusiness} />;
     if (view === "stats") return <MerchantStatsPage />;
-    if (view === "plans") return <MerchantPlansPage />;
-    if (view === "subscription") return <MerchantSubscriptionPage />;
+    if (view === "plans" || view === "subscription") return <MerchantPlansPage />;
     return (
       <MerchantDashboardPage
         user={user}
@@ -85,6 +85,12 @@ export default function AppRoutes({
   // Public pages first
   if (publicPage === "track-order") {
     return <OrderTrackingPage onBack={() => setPublicPage(null)} />;
+  }
+
+  if (publicPage === "cgu" || publicPage === "privacy") {
+    // Retour a la page precedente (inscription, catalogue...) ou a l'accueil.
+    const back = () => (window.history.length > 1 ? window.history.back() : setPublicPage(null));
+    return <LegalPage doc={publicPage} onBack={back} />;
   }
 
   if (publicSlug) {
@@ -108,11 +114,14 @@ export default function AppRoutes({
         />
       );
     }
+    if (authPage === "forgot") return <ForgotPasswordPage onBack={() => setAuthPage("login")} />;
+    if (authPage === "reset") return <ResetPasswordPage onBack={() => setAuthPage("login")} />;
     if (authPage === "login") {
       return (
         <LoginPage
           onLogin={onAuth}
           onGoRegister={() => setAuthPage("register")}
+          onForgot={() => setAuthPage("forgot")}
         />
       );
     }

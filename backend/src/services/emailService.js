@@ -1,5 +1,10 @@
 const nodemailer = require("nodemailer");
 
+// Les noms saisis par les utilisateurs sont echappes avant d'etre inseres dans le HTML.
+function esc(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
 let transporter = null;
 
 function getTransporter() {
@@ -51,16 +56,16 @@ async function notifyAdminNewMerchant({ merchantName, merchantEmail, businessNam
   const subject = `Nouvelle inscription commercant : ${businessName}`;
   const html = `
     <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#f8f9fc;border-radius:12px">
-      <div style="background:#272C68;padding:20px 24px;border-radius:12px 12px 0 0;text-align:center">
-        <h1 style="color:#FFD633;margin:0;font-size:20px">CatalogueCI</h1>
+      <div style="background:#F76707;padding:20px 24px;border-radius:12px 12px 0 0;text-align:center">
+        <h1 style="color:#FFFFFF;margin:0;font-size:20px">CatalogueCI</h1>
       </div>
       <div style="background:#fff;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb">
-        <h2 style="color:#272C68;margin:0 0 16px">Nouveau commercant inscrit</h2>
+        <h2 style="color:#111827;margin:0 0 16px">Nouveau commercant inscrit</h2>
         <table style="width:100%;border-collapse:collapse">
-          <tr><td style="padding:8px 0;color:#667085;font-size:14px">Nom</td><td style="padding:8px 0;font-weight:600;color:#111B4D">${merchantName}</td></tr>
-          <tr><td style="padding:8px 0;color:#667085;font-size:14px">Email</td><td style="padding:8px 0;font-weight:600;color:#111B4D">${merchantEmail}</td></tr>
-          <tr><td style="padding:8px 0;color:#667085;font-size:14px">Boutique</td><td style="padding:8px 0;font-weight:600;color:#111B4D">${businessName}</td></tr>
-          <tr><td style="padding:8px 0;color:#667085;font-size:14px">WhatsApp</td><td style="padding:8px 0;font-weight:600;color:#111B4D">${businessPhone}</td></tr>
+          <tr><td style="padding:8px 0;color:#667085;font-size:14px">Nom</td><td style="padding:8px 0;font-weight:600;color:#111B4D">${esc(merchantName)}</td></tr>
+          <tr><td style="padding:8px 0;color:#667085;font-size:14px">Email</td><td style="padding:8px 0;font-weight:600;color:#111B4D">${esc(merchantEmail)}</td></tr>
+          <tr><td style="padding:8px 0;color:#667085;font-size:14px">Boutique</td><td style="padding:8px 0;font-weight:600;color:#111B4D">${esc(businessName)}</td></tr>
+          <tr><td style="padding:8px 0;color:#667085;font-size:14px">WhatsApp</td><td style="padding:8px 0;font-weight:600;color:#111B4D">${esc(businessPhone)}</td></tr>
         </table>
         <p style="margin:20px 0 0;color:#667085;font-size:13px">Ce commercant a ete automatiquement active. Vous pouvez le gerer depuis le dashboard Super Admin.</p>
       </div>
@@ -76,15 +81,15 @@ async function notifyAdminNewMerchant({ merchantName, merchantEmail, businessNam
 
 async function sendWelcomeEmail({ merchantName, merchantEmail, businessName, businessSlug }) {
   const appUrl = process.env.PUBLIC_APP_URL || "http://localhost:5173";
-  const subject = `Bienvenue sur CatalogueCI, ${merchantName} !`;
+  const subject = `Bienvenue sur CatalogueCI, ${esc(merchantName)} !`;
   const html = `
     <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#f8f9fc;border-radius:12px">
-      <div style="background:#272C68;padding:20px 24px;border-radius:12px 12px 0 0;text-align:center">
-        <h1 style="color:#FFD633;margin:0;font-size:20px">CatalogueCI</h1>
+      <div style="background:#F76707;padding:20px 24px;border-radius:12px 12px 0 0;text-align:center">
+        <h1 style="color:#FFFFFF;margin:0;font-size:20px">CatalogueCI</h1>
       </div>
       <div style="background:#fff;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb">
-        <h2 style="color:#272C68;margin:0 0 8px">Bienvenue ${merchantName} !</h2>
-        <p style="color:#667085;font-size:14px;line-height:1.6">Votre boutique <strong>${businessName}</strong> a ete creee avec succes sur CatalogueCI.</p>
+        <h2 style="color:#111827;margin:0 0 8px">Bienvenue ${esc(merchantName)} !</h2>
+        <p style="color:#667085;font-size:14px;line-height:1.6">Votre boutique <strong>${esc(businessName)}</strong> a ete creee avec succes sur CatalogueCI.</p>
         <p style="color:#667085;font-size:14px;line-height:1.6">Voici ce que vous pouvez faire maintenant :</p>
         <ul style="color:#667085;font-size:14px;line-height:1.8">
           <li>Ajoutez vos produits et services</li>
@@ -92,7 +97,7 @@ async function sendWelcomeEmail({ merchantName, merchantEmail, businessName, bus
           <li>Partagez votre QR code et lien public</li>
         </ul>
         <div style="text-align:center;margin:24px 0">
-          <a href="${appUrl}/catalogue/${businessSlug}" style="background:#272C68;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Voir ma boutique</a>
+          <a href="${appUrl}/catalogue/${encodeURIComponent(businessSlug)}" style="background:#F76707;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Voir ma boutique</a>
         </div>
         <p style="color:#9ca3af;font-size:12px;text-align:center">Connectez-vous sur ${appUrl} pour gerer votre boutique.</p>
       </div>
@@ -106,4 +111,24 @@ async function sendWelcomeEmail({ merchantName, merchantEmail, businessName, bus
   }
 }
 
-module.exports = { sendMail, notifyAdminNewMerchant, sendWelcomeEmail };
+async function sendPasswordResetEmail({ name, email, resetUrl }) {
+  const subject = "Reinitialisation de votre mot de passe CatalogueCI";
+  const html = `
+    <div style="font-family:Inter,sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#f7f6f3;border-radius:12px">
+      <div style="background:#F76707;padding:20px 24px;border-radius:12px 12px 0 0;text-align:center">
+        <h1 style="color:#FFFFFF;margin:0;font-size:20px">CatalogueCI</h1>
+      </div>
+      <div style="background:#fff;padding:24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb">
+        <h2 style="color:#111827;margin:0 0 8px">Bonjour ${esc(name)},</h2>
+        <p style="color:#4b5563;font-size:14px;line-height:1.6">Vous avez demande a reinitialiser votre mot de passe. Cliquez sur le bouton ci-dessous pour en choisir un nouveau. Ce lien est valable 1 heure et ne peut servir qu'une fois.</p>
+        <div style="text-align:center;margin:24px 0">
+          <a href="${esc(resetUrl)}" style="background:#F76707;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Choisir un nouveau mot de passe</a>
+        </div>
+        <p style="color:#6b7280;font-size:12px;line-height:1.6">Si vous n'etes pas a l'origine de cette demande, ignorez cet email : votre mot de passe actuel reste inchange.</p>
+      </div>
+    </div>
+  `;
+  await sendMail({ to: email, subject, html });
+}
+
+module.exports = { sendMail, notifyAdminNewMerchant, sendWelcomeEmail, sendPasswordResetEmail };

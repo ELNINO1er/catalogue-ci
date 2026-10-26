@@ -22,11 +22,11 @@ export default function QRModal({ business, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-brand-950/50 p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink-950/50 p-4 backdrop-blur-sm" onClick={onClose}>
       <div className="w-full max-w-sm animate-slide-up rounded-2xl bg-white shadow-modal" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-surface-border px-6 py-4">
-          <h2 className="font-display font-bold text-brand-800">{business.name}</h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-surface hover:text-brand-700"><X size={18} /></button>
+          <h2 className="font-display font-bold text-ink-800">{business.name}</h2>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-surface hover:text-ink-700"><X size={18} /></button>
         </div>
 
         <div className="flex flex-col items-center px-6 py-8">

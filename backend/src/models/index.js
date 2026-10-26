@@ -79,6 +79,7 @@ Business.hasMany(PlatformPayment, { foreignKey: "business_id", as: "platformPaym
 PlatformPayment.belongsTo(Business, { foreignKey: "business_id", as: "business" });
 Subscription.hasMany(PlatformPayment, { foreignKey: "subscription_id", as: "payments" });
 PlatformPayment.belongsTo(Subscription, { foreignKey: "subscription_id", as: "subscription" });
+PlatformPayment.belongsTo(Plan, { foreignKey: "plan_id", as: "plan" });
 
 Order.hasMany(OrderStatusHistory, { foreignKey: "order_id", as: "statusHistory", onDelete: "CASCADE" });
 OrderStatusHistory.belongsTo(Order, { foreignKey: "order_id", as: "order" });

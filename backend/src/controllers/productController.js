@@ -1,29 +1,31 @@
-const { Op } = require("sequelize");
-const { Product, Business, Subscription, Plan } = require("../models");
+const { Product, Business } = require("../models");
 const { canAccessBusiness } = require("../middleware/ownership");
+const { checkProductLimit } = require("../services/planService");
+const { isSafeUrl, truncateText } = require("../utils/validators");
 
-async function ensureProductLimitIsAvailable(businessId) {
-  const subscription = await Subscription.findOne({
-    where: {
-      business_id: businessId,
-      status: { [Op.in]: ["ACTIVE", "TRIAL"] },
-    },
-    include: [{ model: Plan, as: "plan" }],
-    order: [["created_at", "DESC"]],
-  });
-
-  const productLimit = subscription?.plan?.product_limit;
-  if (!productLimit) return;
-
-  const activeProducts = await Product.count({
-    where: { business_id: businessId, is_active: true },
-  });
-
-  if (activeProducts >= Number(productLimit)) {
-    const error = new Error(`Limite du plan atteinte: ${productLimit} produit(s) autorise(s).`);
-    error.status = 403;
-    throw error;
+// Valide et nettoie les champs produit envoyes. Retourne { error } ou { values }.
+function sanitizeProductInput(body, { partial = false } = {}) {
+  const values = {};
+  if (body.name !== undefined || !partial) {
+    const name = truncateText(body.name, 150);
+    if (!name) return { error: "Nom du produit obligatoire." };
+    values.name = name;
   }
+  if (body.price !== undefined || !partial) {
+    const price = Number(body.price);
+    if (body.price === "" || body.price === null || !Number.isFinite(price) || price < 0) {
+      return { error: "Prix invalide." };
+    }
+    values.price = price;
+  }
+  if (body.image_url !== undefined) {
+    if (body.image_url && !isSafeUrl(body.image_url)) return { error: "Lien d'image invalide." };
+    values.image_url = body.image_url ? truncateText(body.image_url, 500) : null;
+  }
+  if (body.description !== undefined) values.description = truncateText(body.description, 2000) || null;
+  if (body.category !== undefined) values.category = truncateText(body.category, 100) || null;
+  if (body.is_available !== undefined) values.is_available = Boolean(body.is_available);
+  return { values };
 }
 
 exports.listByBusiness = async (req, res, next) => {
@@ -56,21 +58,13 @@ exports.create = async (req, res, next) => {
       return res.status(403).json({ success: false, message: "Ce commerce est suspendu." });
     }
 
-    const { name, image_url, price, description, category, is_available } = req.body;
-    if (!name || price === undefined) {
-      return res.status(400).json({ message: "Nom et prix obligatoires." });
-    }
-
-    await ensureProductLimitIsAvailable(businessId);
+    const { error, values } = sanitizeProductInput(req.body);
+    if (error) return res.status(400).json({ success: false, message: error });
 
     const product = await Product.create({
       business_id: businessId,
-      name,
-      image_url,
-      price,
-      description,
-      category,
-      is_available: is_available ?? true,
+      is_available: true,
+      ...values,
     });
     return res.status(201).json(product);
   } catch (err) {
@@ -121,10 +115,26 @@ exports.update = async (req, res, next) => {
       return res.status(403).json({ message: "Acces refuse." });
     }
 
-    ["name", "image_url", "price", "description", "category", "is_available", "is_active"].forEach((field) => {
-      if (req.body[field] !== undefined) product[field] = req.body[field];
-    });
+    const { error, values } = sanitizeProductInput(req.body, { partial: true });
+    if (error) return res.status(400).json({ success: false, message: error });
 
+    // Reactiver un produit compte dans la limite du plan, comme une creation.
+    if (req.body.is_active !== undefined) {
+      const wantsActive = Boolean(req.body.is_active);
+      if (wantsActive && !product.is_active) {
+        const limit = await checkProductLimit(product.business_id);
+        if (!limit.allowed) {
+          return res.status(403).json({
+            success: false,
+            code: "PRODUCT_LIMIT_REACHED",
+            message: `Limite de produits atteinte (${limit.current}/${limit.limit}). Passez a un plan superieur.`,
+          });
+        }
+      }
+      values.is_active = wantsActive;
+    }
+
+    Object.assign(product, values);
     await product.save();
     return res.json(product);
   } catch (err) {

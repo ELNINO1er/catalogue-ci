@@ -1,10 +1,10 @@
 const router = require("express").Router();
 const auth = require("../middleware/auth");
 const ctrl = require("../controllers/orderController");
-const { orderCreationLimiter, waveCheckoutLimiter } = require("../middleware/rateLimiters");
+const { orderCreationLimiter, waveCheckoutLimiter, orderTrackingLimiter } = require("../middleware/rateLimiters");
 
 router.post("/public/catalogue/:slug/orders", orderCreationLimiter, ctrl.createPublic);
-router.post("/public/orders/track", ctrl.trackPublic);
+router.post("/public/orders/track", orderTrackingLimiter, ctrl.trackPublic);
 router.post("/orders/:id/wave-checkout", waveCheckoutLimiter, ctrl.createWaveCheckout);
 router.post("/orders/:id/payment-sent", waveCheckoutLimiter, ctrl.markPaymentSent);
 router.get("/businesses/:businessId/orders", auth, ctrl.listByBusiness);

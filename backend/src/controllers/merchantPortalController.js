@@ -11,9 +11,15 @@ const {
   StoreTemplate,
   PlatformSetting,
 } = require("../models");
-const { generateUniqueSlug } = require("../utils/slug");
-const { truncateText } = require("../utils/validators");
-const { getBusinessPlanInfo } = require("../services/planService");
+const { getDashboardTrends } = require("../services/statsService");
+const { truncateText, validateBusinessFields } = require("../utils/validators");
+const { getBusinessPlanInfo, getBusinessSubscription, isBillingEnabled } = require("../services/planService");
+
+async function canUsePremiumTemplates(businessId) {
+  const sub = await getBusinessSubscription(businessId);
+  if (!sub || sub.isExpired) return false;
+  return sub.freeMode || Number(sub.plan?.price || 0) > 0;
+}
 
 function getBusinessId(req) {
   return req.user?.business_id;
@@ -120,7 +126,8 @@ exports.dashboard = async (req, res, next) => {
 
     res.json({
       business: json,
-      subscription,
+      subscription: (await isBillingEnabled()) ? subscription : null,
+      trends: await getDashboardTrends({ businessId, range: req.query.range, categoryBy: "product" }),
       stats: {
         products_count: productsCount,
         orders_today: ordersToday,
@@ -136,6 +143,24 @@ exports.dashboard = async (req, res, next) => {
         })),
       },
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Compteurs de la cloche de l'en-tete : ce que le commercant doit traiter.
+exports.notifications = async (req, res, next) => {
+  try {
+    const businessId = getBusinessId(req);
+    if (!businessId) return res.json({ total: 0, items: [] });
+    const [newOrders, toVerify] = await Promise.all([
+      Order.count({ where: { business_id: businessId, status: "PENDING" } }),
+      Order.count({ where: { business_id: businessId, status: "AWAITING_VERIFICATION" } }),
+    ]);
+    const items = [];
+    if (toVerify) items.push({ key: "verify", view: "orders", label: `${toVerify} paiement(s) a verifier` });
+    if (newOrders) items.push({ key: "new", view: "orders", label: `${newOrders} nouvelle(s) commande(s)` });
+    res.json({ total: newOrders + toVerify, items });
   } catch (err) {
     next(err);
   }
@@ -277,22 +302,23 @@ exports.updateBusiness = async (req, res, next) => {
       "font_family",
     ];
 
+    // Le slug n'est pas regenere au renommage : les liens et QR codes deja partages restent valides.
     if (req.body.name && req.body.name !== business.name) {
       business.name = truncateText(req.body.name, 150);
-      business.slug = await generateUniqueSlug(Business, business.name);
     }
 
     if (req.body.template_id) {
       const template = await StoreTemplate.findByPk(req.body.template_id);
-      const subscription = await getCurrentSubscription(business.id);
-      const hasPaidPlan = Number(subscription?.plan?.price || 0) > 0;
       if (!template || !template.is_active) {
         return res.status(400).json({ success: false, message: "Template invalide." });
       }
-      if (template.is_premium && !hasPaidPlan) {
+      if (template.is_premium && !(await canUsePremiumTemplates(business.id))) {
         return res.status(403).json({ success: false, message: "Ce template est reserve aux plans payants." });
       }
     }
+
+    const validationError = validateBusinessFields(req.body);
+    if (validationError) return res.status(400).json({ success: false, message: validationError });
 
     fields.forEach((field) => {
       if (req.body[field] !== undefined) business[field] = req.body[field] || null;
@@ -308,8 +334,7 @@ exports.updateBusiness = async (req, res, next) => {
 exports.listTemplates = async (req, res, next) => {
   try {
     const businessId = getBusinessId(req);
-    const subscription = businessId ? await getCurrentSubscription(businessId) : null;
-    const hasPaidPlan = Number(subscription?.plan?.price || 0) > 0;
+    const hasPaidPlan = businessId ? await canUsePremiumTemplates(businessId) : false;
     const where = hasPaidPlan ? { is_active: true } : { is_active: true, is_premium: false };
     res.json(await StoreTemplate.findAll({ where, order: [["name", "ASC"]] }));
   } catch (err) {
@@ -352,67 +377,54 @@ exports.requestPlanChange = async (req, res, next) => {
     const businessId = getBusinessId(req);
     if (!businessId) return res.status(400).json({ success: false, message: "Aucune boutique associee." });
 
+    if (!(await isBillingEnabled())) {
+      return res.status(400).json({ success: false, code: "FREE_MODE", message: "Toutes les fonctionnalites sont gratuites pendant le lancement. Aucun changement de plan n'est necessaire." });
+    }
+
     const { plan_id } = req.body;
     const plan = await Plan.findByPk(plan_id);
     if (!plan || !plan.is_active) return res.status(404).json({ success: false, message: "Plan introuvable." });
 
-    // Find or create subscription for the new plan
     let subscription = await Subscription.findOne({
       where: { business_id: businessId },
       order: [["created_at", "DESC"]],
     });
 
-    if (subscription) {
-      subscription.plan_id = plan.id;
-      if (Number(plan.price) === 0) {
-        subscription.status = "ACTIVE";
-        const endsAt = new Date();
-        endsAt.setFullYear(endsAt.getFullYear() + 10);
-        subscription.ends_at = endsAt;
-        subscription.starts_at = new Date();
-      } else {
-        // Paid plan: subscription stays as-is until payment confirmed
-        if (subscription.status === "TRIAL" || subscription.status === "EXPIRED") {
-          subscription.status = "TRIAL";
-        }
-      }
-      await subscription.save();
-    } else {
+    // Plan gratuit : applique immediatement.
+    if (Number(plan.price) === 0) {
       const now = new Date();
       const endsAt = new Date(now);
-      if (Number(plan.price) === 0) {
-        endsAt.setFullYear(endsAt.getFullYear() + 10);
+      endsAt.setFullYear(endsAt.getFullYear() + 10);
+      if (subscription) {
+        Object.assign(subscription, { plan_id: plan.id, status: "ACTIVE", starts_at: now, ends_at: endsAt });
+        await subscription.save();
       } else {
-        endsAt.setDate(endsAt.getDate() + 7);
+        subscription = await Subscription.create({ business_id: businessId, plan_id: plan.id, status: "ACTIVE", starts_at: now, ends_at: endsAt });
       }
-      subscription = await Subscription.create({
-        business_id: businessId,
-        plan_id: plan.id,
-        status: Number(plan.price) === 0 ? "ACTIVE" : "TRIAL",
-        starts_at: now,
-        ends_at: endsAt,
-      });
+      await PlatformPayment.update({ status: "CANCELLED" }, { where: { business_id: businessId, status: "PENDING" } });
+      return res.json({ success: true, subscription, payment: null, message: "Plan mis a jour avec succes." });
     }
 
-    // If plan is paid, create a pending platform payment
-    let payment = null;
-    if (Number(plan.price) > 0) {
-      payment = await PlatformPayment.create({
-        business_id: businessId,
-        subscription_id: subscription.id,
-        amount: plan.price,
-        method: "wave",
-        status: "PENDING",
-      });
-    }
+    // Plan payant : l'abonnement actuel ne change PAS. Le plan demande est memorise
+    // sur le paiement et ne sera applique qu'a la confirmation par l'administrateur.
+    await PlatformPayment.update(
+      { status: "CANCELLED" },
+      { where: { business_id: businessId, status: "PENDING", reference: null } }
+    );
+    const payment = await PlatformPayment.create({
+      business_id: businessId,
+      subscription_id: subscription?.id || null,
+      plan_id: plan.id,
+      amount: plan.price,
+      method: "wave",
+      status: "PENDING",
+    });
 
     res.json({
       success: true,
       subscription,
       payment,
-      message: Number(plan.price) > 0
-        ? "Demande de changement de plan enregistree. Veuillez effectuer le paiement."
-        : "Plan mis a jour avec succes.",
+      message: "Demande enregistree. Effectuez le paiement : le plan sera active apres verification.",
     });
   } catch (err) {
     next(err);
@@ -426,14 +438,15 @@ exports.submitSubscriptionPayment = async (req, res, next) => {
 
     const { payment_id, reference } = req.body;
     if (!payment_id) return res.status(400).json({ success: false, message: "payment_id requis." });
+    const safeReference = truncateText(reference, 120);
+    if (!safeReference) return res.status(400).json({ success: false, message: "Reference de transaction obligatoire." });
 
     const payment = await PlatformPayment.findOne({
       where: { id: payment_id, business_id: businessId, status: "PENDING" },
     });
     if (!payment) return res.status(404).json({ success: false, message: "Paiement introuvable ou deja traite." });
 
-    payment.reference = truncateText(reference, 120) || null;
-    payment.status = "PENDING"; // stays pending until admin confirms
+    payment.reference = safeReference;
     await payment.save();
 
     res.json({

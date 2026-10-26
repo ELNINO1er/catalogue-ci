@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import Button from "../ui/Button";
+import Dropdown from "../ui/Dropdown";
 import { createCustomField, deleteCustomField, listCustomFields } from "../../services/customFieldService";
 
 const fieldTypes = ["text", "textarea", "number", "phone", "email", "date", "time", "select", "checkbox", "radio", "file", "address"];
@@ -58,39 +59,40 @@ export default function CustomFieldsEditor({ product }) {
   const needsOptions = ["select", "checkbox", "radio"].includes(form.field_type);
 
   return (
-    <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
-      <p className="mb-3 text-sm font-bold text-slate-800">Champs personnalises</p>
+    <div className="mt-4 rounded-lg border border-surface-border bg-surface p-3">
+      <p className="mb-3 text-sm font-bold text-ink-800">Champs personnalises</p>
       <div className="space-y-2">
         {fields.map((field) => (
-          <div key={field.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-white px-3 py-2 text-sm">
+          <div key={field.id} className="flex items-center justify-between gap-3 rounded-lg border border-ink-100 bg-white px-3 py-2 text-sm">
             <div className="min-w-0">
-              <p className="truncate font-semibold text-slate-900">{field.label}</p>
-              <p className="text-xs text-slate-500">
+              <p className="truncate font-semibold text-ink-900">{field.label}</p>
+              <p className="text-xs text-ink-500">
                 {field.field_type} {field.is_required ? "- obligatoire" : "- optionnel"}
               </p>
             </div>
-            <Button type="button" tone="danger" onClick={() => removeField(field.id)} aria-label="Supprimer le champ">
+            <Button type="button" tone="dangerSoft" onClick={() => removeField(field.id)} aria-label="Supprimer le champ">
               <Trash2 size={14} />
             </Button>
           </div>
         ))}
       </div>
 
-      <form onSubmit={addField} className="mt-3 space-y-3 rounded-lg border border-slate-200 bg-white p-3">
+      <form onSubmit={addField} className="mt-3 space-y-3 card p-3">
         <div className="grid gap-3 lg:grid-cols-[1fr_160px]">
           <input
             value={form.label}
             onChange={(event) => setForm({ ...form, label: event.target.value })}
             placeholder="Label du champ"
-            className="min-w-0 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+            className="min-w-0 rounded-lg border border-ink-300 px-3 py-2 text-sm outline-none focus:border-brand-400"
           />
-          <select
+          <Dropdown
+            size="sm"
+            ariaLabel="Type de champ"
+            className="min-w-0"
             value={form.field_type}
-            onChange={(event) => setForm({ ...form, field_type: event.target.value, options_json: "" })}
-            className="min-w-0 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
-          >
-            {fieldTypes.map((type) => <option key={type} value={type}>{type}</option>)}
-          </select>
+            onChange={(next) => setForm({ ...form, field_type: next, options_json: "" })}
+            options={fieldTypes.map((type) => ({ value: type, label: type }))}
+          />
         </div>
 
         {needsOptions ? (
@@ -98,17 +100,17 @@ export default function CustomFieldsEditor({ product }) {
             value={form.options_json}
             onChange={(event) => setForm({ ...form, options_json: event.target.value })}
             placeholder="Options separees par des virgules : S, M, L, XL"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+            className="w-full rounded-lg border border-ink-300 px-3 py-2 text-sm outline-none focus:border-brand-400"
           />
         ) : null}
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+          <label className="flex items-center gap-2 text-sm font-medium text-ink-700">
             <input
               type="checkbox"
               checked={form.is_required}
               onChange={(event) => setForm({ ...form, is_required: event.target.checked })}
-              className="h-4 w-4 accent-emerald-600"
+              className="h-4 w-4 accent-brand-500"
             />
             Obligatoire
           </label>

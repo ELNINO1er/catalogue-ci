@@ -301,11 +301,12 @@ exports.updateStatus = async (req, res, next) => {
 exports.markPaymentSent = async (req, res, next) => {
   try {
     const order = await Order.findByPk(req.params.id);
-    if (!order) return res.status(404).json({ success: false, message: "Commande introuvable." });
-
     const customerPhone = req.body?.customer_phone ? truncateText(req.body.customer_phone, 30) : null;
-    if (!customerPhone || customerPhone !== order.customer_phone) {
-      return res.status(403).json({ success: false, message: "Telephone invalide pour cette commande." });
+    if (!order || !customerPhone || customerPhone !== order.customer_phone) {
+      return res.status(404).json({ success: false, message: "Commande introuvable." });
+    }
+    if (["CANCELLED", "REFUNDED", "DELIVERED"].includes(order.status)) {
+      return res.status(400).json({ success: false, message: "Cette commande ne peut plus recevoir de paiement." });
     }
 
     if (order.payment_status === "PAID") {
@@ -344,7 +345,11 @@ exports.markPaymentSent = async (req, res, next) => {
 exports.createWaveCheckout = async (req, res, next) => {
   try {
     const order = await Order.findByPk(req.params.id, { include: orderIncludes() });
-    if (!order) return res.status(404).json({ success: false, message: "Commande introuvable." });
+    // Le telephone du client est obligatoire : sans lui, n'importe qui pourrait lire les commandes une par une.
+    const customerPhone = req.body?.customer_phone ? truncateText(req.body.customer_phone, 30) : null;
+    if (!order || !customerPhone || customerPhone !== order.customer_phone) {
+      return res.status(404).json({ success: false, message: "Commande introuvable." });
+    }
 
     if (order.payment_method !== "wave_checkout") {
       return res.status(400).json({ success: false, message: "Cette commande n'utilise pas Wave Checkout." });
@@ -370,11 +375,6 @@ exports.createWaveCheckout = async (req, res, next) => {
     });
     if (!business || !business.paymentSettings?.is_wave_checkout_enabled) {
       return res.status(400).json({ success: false, message: "Wave Checkout n'est pas active pour cette boutique." });
-    }
-
-    const customerPhone = req.body?.customer_phone ? truncateText(req.body.customer_phone, 30) : null;
-    if (customerPhone && customerPhone !== order.customer_phone) {
-      return res.status(403).json({ success: false, message: "Acces refuse a cette commande." });
     }
 
     const session = await createCheckoutSession({ req, order });

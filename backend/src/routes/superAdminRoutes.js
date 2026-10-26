@@ -6,6 +6,7 @@ const ctrl = require("../controllers/superAdminController");
 router.use(auth, requireRole("SUPER_ADMIN"));
 
 router.get("/dashboard", ctrl.dashboard);
+router.get("/notifications", ctrl.notifications);
 
 router.get("/plans", ctrl.listPlans);
 router.post("/plans", ctrl.createPlan);

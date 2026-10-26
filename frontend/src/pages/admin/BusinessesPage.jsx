@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Edit3, Eye, PauseCircle, PlayCircle, Plus, QrCode, Search } from "lucide-react";
+import { Edit3, ExternalLink, Package, PauseCircle, PlayCircle, Plus, QrCode, Store } from "lucide-react";
 import Button from "../../components/ui/Button";
+import EmptyState from "../../components/ui/EmptyState";
+import Input, { Select, Textarea } from "../../components/ui/Input";
+import {
+  Avatar, CardGrid, FilterTabs, IconButton, ListSkeleton, MetaRow, PageHeader, SearchField, StatusPill, SummaryStrip, Toolbar,
+} from "../../components/ui/PageKit";
 import FormModal from "../../components/modals/FormModal";
 import ConfirmModal from "../../components/modals/ConfirmModal";
 import { createBusiness, listBusinesses, updateBusiness } from "../../services/businessService";
@@ -19,9 +24,11 @@ const emptyForm = {
   is_active: true,
 };
 
+const SUBSCRIPTION_LABELS = { TRIAL: "Essai", ACTIVE: "Actif", EXPIRED: "Expire", SUSPENDED: "Suspendu", CANCELLED: "Annule" };
+
 function planLabel(subscription) {
   if (!subscription?.plan) return "Aucun plan";
-  return `${subscription.plan.name} - ${subscription.status}`;
+  return `${subscription.plan.name} · ${SUBSCRIPTION_LABELS[subscription.status] || subscription.status}`;
 }
 
 export default function BusinessesPage({ setPublicSlug, setQrBusiness }) {
@@ -35,6 +42,8 @@ export default function BusinessesPage({ setPublicSlug, setQrBusiness }) {
   const [error, setError] = useState("");
   const [form, setForm] = useState(emptyForm);
   const [toggleConfirm, setToggleConfirm] = useState(null);
+  const [status, setStatus] = useState("all");
+  const [loading, setLoading] = useState(true);
 
   async function loadBusinesses() {
     setItems(await listBusinesses());
@@ -52,7 +61,7 @@ export default function BusinessesPage({ setPublicSlug, setQrBusiness }) {
   }
 
   useEffect(() => {
-    loadBusinesses().catch(() => setItems([]));
+    loadBusinesses().catch(() => setItems([])).finally(() => setLoading(false));
     loadReferences().catch(() => {
       setCategories([]);
       setPlans([]);
@@ -135,135 +144,135 @@ export default function BusinessesPage({ setPublicSlug, setQrBusiness }) {
     await loadBusinesses();
   }
 
-  const filtered = useMemo(
-    () => items.filter((item) => item.name.toLowerCase().includes(query.toLowerCase())),
-    [items, query]
-  );
+  const counts = useMemo(() => ({
+    all: items.length,
+    active: items.filter((b) => b.is_active).length,
+    suspended: items.filter((b) => !b.is_active).length,
+    products: items.reduce((sum, b) => sum + Number(b.products_count || 0), 0),
+  }), [items]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return items.filter((item) => {
+      if (status === "active" && !item.is_active) return false;
+      if (status === "suspended" && item.is_active) return false;
+      return !q || `${item.name} ${item.slug} ${item.category?.name || ""}`.toLowerCase().includes(q);
+    });
+  }, [items, query, status]);
+
+  const field = (key) => ({ value: form[key], onChange: (e) => setForm({ ...form, [key]: e.target.value }) });
 
   return (
-    <div className="space-y-5 p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Boutiques</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Une boutique gere le catalogue public. Le compte commercant est gere dans l'onglet Commercants.
-          </p>
-        </div>
-        <Button onClick={openCreateModal}>
-          <Plus size={16} />
-          Nouvelle boutique
-        </Button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Boutiques"
+        description="Chaque boutique a son catalogue public. Les comptes de connexion se gerent dans l'onglet Commercants."
+        actions={<Button onClick={openCreateModal}><Plus size={16} /> Nouvelle boutique</Button>}
+      />
 
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Rechercher"
-          className="w-full rounded-lg border border-slate-300 py-2 pl-10 pr-3 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+      <SummaryStrip
+        items={[
+          { label: "Boutiques", value: counts.all, icon: Store },
+          { label: "En ligne", value: counts.active, icon: PlayCircle, tone: "success" },
+          { label: "Suspendues", value: counts.suspended, icon: PauseCircle, tone: counts.suspended ? "danger" : "neutral" },
+          { label: "Produits publies", value: counts.products, icon: Package, tone: "info" },
+        ]}
+      />
+
+      <Toolbar right={<SearchField value={query} onChange={setQuery} placeholder="Rechercher une boutique" />}>
+        <FilterTabs
+          label="Statut des boutiques"
+          value={status}
+          onChange={setStatus}
+          options={[
+            { value: "all", label: "Toutes", count: counts.all },
+            { value: "active", label: "En ligne", count: counts.active },
+            { value: "suspended", label: "Suspendues", count: counts.suspended },
+          ]}
         />
-      </div>
+      </Toolbar>
 
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-        {filtered.map((business) => (
-          <div key={business.id} className="grid gap-3 border-b border-slate-100 p-4 last:border-0 lg:grid-cols-[1.4fr_1fr_1fr_auto] lg:items-center">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="font-semibold text-slate-900">{business.name}</p>
-                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${business.is_active ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
-                  {business.is_active ? "Active" : "Suspendue"}
-                </span>
+      {loading ? <ListSkeleton /> : filtered.length ? (
+        <CardGrid>
+          {filtered.map((business) => (
+            <article key={business.id} className="card-hover flex flex-col p-5">
+              <div className="flex items-start gap-3">
+                <Avatar name={business.name} />
+                <div className="min-w-0 flex-1">
+                  <h2 className="truncate font-display text-base font-bold text-ink-900">{business.name}</h2>
+                  <p className="truncate text-xs text-ink-500">/catalogue/{business.slug}</p>
+                </div>
+                <StatusPill tone={business.is_active ? "success" : "danger"}>{business.is_active ? "En ligne" : "Suspendue"}</StatusPill>
               </div>
-              <p className="text-sm text-slate-500">
-                /catalogue/{business.slug} - {business.products_count || 0} produits
-              </p>
-            </div>
-            <p className="text-sm text-slate-600">{planLabel(business.current_subscription)}</p>
-            <p className="text-sm text-slate-600">{business.template?.name || "Template par defaut"}</p>
-            <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
-              <Button tone="secondary" onClick={() => openEditModal(business)} title="Modifier la boutique">
-                <Edit3 size={16} />
-              </Button>
-              <Button tone="secondary" onClick={() => askToggle(business)} title={business.is_active ? "Suspendre la boutique" : "Reactiver la boutique"}>
-                {business.is_active ? <PauseCircle size={16} /> : <PlayCircle size={16} />}
-              </Button>
-              <Button tone="secondary" onClick={() => setQrBusiness(business)} title="Generer le QR code">
-                <QrCode size={16} />
-              </Button>
-              <Button tone="secondary" onClick={() => setPublicSlug(business.slug)} title="Voir le catalogue">
-                <Eye size={16} />
-              </Button>
-            </div>
-          </div>
-        ))}
-        {!filtered.length ? <p className="p-4 text-sm text-slate-500">Aucune boutique trouvee.</p> : null}
-      </div>
+
+              <div className="mt-4 divide-y divide-surface-border rounded-xl bg-surface px-3">
+                <MetaRow label="Categorie">{business.category?.name || "Sans categorie"}</MetaRow>
+                <MetaRow label="Plan">{planLabel(business.current_subscription)}</MetaRow>
+                <MetaRow label="Template">{business.template?.name || "Par defaut"}</MetaRow>
+                <MetaRow label="Produits">{business.products_count || 0}</MetaRow>
+              </div>
+
+              <div className="mt-4 flex items-center gap-2">
+                <Button tone="secondary" size="sm" className="flex-1" onClick={() => setPublicSlug(business.slug)}>
+                  <ExternalLink size={14} /> Voir le catalogue
+                </Button>
+                <IconButton icon={Edit3} label="Modifier la boutique" onClick={() => openEditModal(business)} />
+                <IconButton icon={QrCode} label="QR code" onClick={() => setQrBusiness(business)} />
+                <IconButton
+                  icon={business.is_active ? PauseCircle : PlayCircle}
+                  label={business.is_active ? "Suspendre la boutique" : "Reactiver la boutique"}
+                  tone={business.is_active ? "danger" : "success"}
+                  onClick={() => askToggle(business)}
+                />
+              </div>
+            </article>
+          ))}
+        </CardGrid>
+      ) : (
+        <EmptyState
+          icon={Store}
+          title={items.length ? "Aucune boutique ne correspond" : "Aucune boutique"}
+          description={items.length ? "Modifiez la recherche ou le filtre." : "Les boutiques creees par les commercants apparaitront ici."}
+        />
+      )}
 
       {modalOpen ? (
         <FormModal
           title={editingBusiness ? "Modifier la boutique" : "Nouvelle boutique"}
-          description="Choisissez un plan pour activer les limites d'abonnement et un template pour le rendu public."
+          description="Le plan applique les limites d'abonnement ; le template donne le style du catalogue public."
           onClose={closeModal}
         >
-          <form onSubmit={submit} className="grid gap-4">
-            <div className="grid gap-3 md:grid-cols-2">
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">
-                Nom de la boutique
-                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="rounded-lg border px-3 py-2 font-normal" required />
+          <form onSubmit={submit} className="grid gap-5">
+            <div className="grid gap-4 md:grid-cols-2">
+              <Input label="Nom de la boutique" required {...field("name")} />
+              <Select label="Categorie" {...field("category_id")}>
+                <option value="">Sans categorie</option>
+                {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+              </Select>
+              <Select label="Plan d'abonnement" {...field("plan_id")}>
+                <option value="">Aucun plan</option>
+                {plans.map((plan) => (
+                  <option key={plan.id} value={plan.id}>
+                    {plan.name} · {Number(plan.price).toLocaleString("fr-FR")} FCFA/mois · {plan.product_limit || "illimite"} produits
+                  </option>
+                ))}
+              </Select>
+              <Select label="Template" {...field("template_id")}>
+                <option value="">Template par defaut</option>
+                {templates.map((template) => <option key={template.id} value={template.id}>{template.name}{template.is_premium ? " · Premium" : ""}</option>)}
+              </Select>
+              <Input label="WhatsApp" placeholder="2250700000000" required {...field("whatsapp_number")} />
+              <Input label="Telephone" {...field("phone_number")} />
+              <div className="md:col-span-2"><Input label="Adresse" {...field("address")} /></div>
+              <Input label="Horaires" placeholder="Lun-Sam 08h-20h" {...field("opening_hours")} />
+              <label className="flex items-center gap-2 self-end rounded-xl border border-surface-border px-4 py-3 text-sm font-semibold text-ink-700">
+                <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} className="h-4 w-4 accent-brand-500" />
+                Boutique en ligne
               </label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">
-                Categorie
-                <select value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })} className="rounded-lg border px-3 py-2 font-normal">
-                  <option value="">Sans categorie</option>
-                  {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-                </select>
-              </label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">
-                Plan d'abonnement
-                <select value={form.plan_id} onChange={(e) => setForm({ ...form, plan_id: e.target.value })} className="rounded-lg border px-3 py-2 font-normal">
-                  <option value="">Aucun plan</option>
-                  {plans.map((plan) => (
-                    <option key={plan.id} value={plan.id}>
-                      {plan.name} - {Number(plan.price).toLocaleString("fr-FR")} FCFA/mois - {plan.product_limit || "illimite"} produits
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">
-                Template
-                <select value={form.template_id} onChange={(e) => setForm({ ...form, template_id: e.target.value })} className="rounded-lg border px-3 py-2 font-normal">
-                  <option value="">Template par defaut</option>
-                  {templates.map((template) => <option key={template.id} value={template.id}>{template.name}{template.is_premium ? " - Premium" : ""}</option>)}
-                </select>
-              </label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">
-                WhatsApp
-                <input value={form.whatsapp_number} onChange={(e) => setForm({ ...form, whatsapp_number: e.target.value })} className="rounded-lg border px-3 py-2 font-normal" placeholder="2250700000000" required />
-              </label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">
-                Telephone
-                <input value={form.phone_number} onChange={(e) => setForm({ ...form, phone_number: e.target.value })} className="rounded-lg border px-3 py-2 font-normal" />
-              </label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700 md:col-span-2">
-                Adresse
-                <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="rounded-lg border px-3 py-2 font-normal" />
-              </label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">
-                Horaires
-                <input value={form.opening_hours} onChange={(e) => setForm({ ...form, opening_hours: e.target.value })} className="rounded-lg border px-3 py-2 font-normal" placeholder="Lun-Sam 08h-20h" />
-              </label>
-              <label className="flex items-center gap-2 pt-6 text-sm font-semibold text-slate-700">
-                <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />
-                Boutique active
-              </label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700 md:col-span-2">
-                Description
-                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} className="resize-none rounded-lg border px-3 py-2 font-normal" />
-              </label>
+              <div className="md:col-span-2"><Textarea label="Description" rows={3} {...field("description")} /></div>
             </div>
-            {error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
-            <div className="flex justify-end gap-2">
+            {error ? <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
+            <div className="flex justify-end gap-2 border-t border-surface-border pt-4">
               <Button tone="secondary" onClick={closeModal}>Annuler</Button>
               <Button type="submit">{editingBusiness ? "Enregistrer" : "Creer la boutique"}</Button>
             </div>

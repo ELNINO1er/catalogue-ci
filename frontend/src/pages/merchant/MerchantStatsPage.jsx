@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-import { BarChart3, CreditCard, MessageCircle, Package, Percent, ShoppingBag, Wallet } from "lucide-react";
-import StatCard from "../../components/common/StatCard";
+import { BarChart3, CreditCard, MessageCircle, Percent, ShoppingBag, Wallet } from "lucide-react";
+import EmptyState from "../../components/ui/EmptyState";
+import { PageLoading } from "../../components/ui/LoadingSpinner";
+import { PageHeader } from "../../components/ui/PageKit";
+import { KpiCard, Panel, RankingList } from "../../components/dashboard/DashboardWidgets";
 import { getMerchantAnalytics } from "../../services/merchantService";
 import { fmt } from "../../utils/formatters";
 
@@ -26,16 +29,17 @@ const paymentStatusLabels = {
   REFUNDED: "Rembourses",
 };
 
+// Barre de repartition : libelle + valeur + part, une seule couleur (le libelle porte l'identite).
 function ProgressRow({ label, value, total }) {
   const percent = total ? Math.round((value / total) * 100) : 0;
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-sm">
-        <span className="font-semibold text-slate-700">{label}</span>
-        <span className="text-slate-500">{fmt(value)} - {percent}%</span>
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <span className="font-medium text-ink-700">{label}</span>
+        <span className="text-ink-500"><span className="font-semibold text-ink-900">{fmt(value)}</span> · {percent}%</span>
       </div>
-      <div className="h-2 rounded-full bg-slate-100">
-        <div className="h-2 rounded-full bg-emerald-600" style={{ width: `${percent}%` }} />
+      <div className="h-2 rounded-full bg-ink-100" role="presentation">
+        <div className="h-2 rounded-full bg-brand-500" style={{ width: `${percent}%` }} />
       </div>
     </div>
   );
@@ -51,80 +55,75 @@ export default function MerchantStatsPage() {
     });
   }, []);
 
-  if (error) return <p className="p-5 text-sm text-rose-700">{error}</p>;
-  if (!data) return <p className="p-5 text-sm text-slate-500">Chargement des statistiques...</p>;
+  if (error) return <EmptyState icon={BarChart3} title="Statistiques indisponibles" description={error} />;
+  if (!data) return <PageLoading message="Chargement des statistiques..." />;
 
   const { summary } = data;
+  const ranking = data.top_products.map((item) => ({
+    id: item.product_id,
+    name: item.name,
+    orders: item.orders_count,
+    revenue: item.revenue,
+  }));
 
   return (
-    <div className="space-y-5 p-5">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Statistiques</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Analyse des ventes, paiements, conversion WhatsApp et produits les plus performants.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Statistiques"
+        description="Ventes, paiements, conversion WhatsApp et produits les plus performants, depuis l'ouverture de la boutique."
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={Wallet} label="Ventes totales payees" value={`${fmt(summary.total_sales)} FCFA`} tone="bg-emerald-50 text-emerald-700" />
-        <StatCard icon={BarChart3} label="Ventes du mois" value={`${fmt(summary.monthly_sales)} FCFA`} tone="bg-sky-50 text-sky-700" />
-        <StatCard icon={ShoppingBag} label="Commandes totales" value={fmt(summary.total_orders)} tone="bg-violet-50 text-violet-700" />
-        <StatCard icon={ShoppingBag} label="Commandes semaine" value={fmt(summary.orders_week)} tone="bg-amber-50 text-amber-700" />
-        <StatCard icon={CreditCard} label="Commandes payees" value={fmt(summary.paid_orders)} tone="bg-teal-50 text-teal-700" />
-        <StatCard icon={Percent} label="Conversion WhatsApp" value={`${fmt(summary.conversion_rate)}%`} tone="bg-orange-50 text-orange-700" />
-        <StatCard icon={Wallet} label="Panier moyen" value={`${fmt(summary.average_basket)} FCFA`} tone="bg-rose-50 text-rose-700" />
-        <StatCard icon={MessageCircle} label="Clics WhatsApp" value={fmt(summary.whatsapp_clicks)} tone="bg-lime-50 text-lime-700" />
+        <KpiCard icon={Wallet} label="Ventes payees" value={fmt(summary.total_sales)} unit="FCFA" compareLabel={`${fmt(summary.monthly_sales)} FCFA ce mois`} />
+        <KpiCard icon={ShoppingBag} label="Commandes" value={fmt(summary.total_orders)} compareLabel={`${fmt(summary.orders_week)} cette semaine`} />
+        <KpiCard icon={CreditCard} label="Commandes payees" value={fmt(summary.paid_orders)} compareLabel={`Panier moyen ${fmt(summary.average_basket)} FCFA`} />
+        <KpiCard icon={Percent} label="Conversion WhatsApp" value={`${fmt(summary.conversion_rate)}%`} compareLabel={`${fmt(summary.whatsapp_clicks)} clic(s) WhatsApp`} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="rounded-lg border border-slate-200 bg-white p-4">
-          <h2 className="mb-4 font-bold text-slate-900">Repartition des commandes</h2>
-          <div className="space-y-3">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Panel title="Repartition des commandes">
+          <div className="space-y-4">
             {data.status_breakdown.map((item) => (
               <ProgressRow key={item.status} label={orderStatusLabels[item.status] || item.status} value={item.count} total={summary.total_orders} />
             ))}
-            {!data.status_breakdown.length ? <p className="text-sm text-slate-500">Aucune commande pour le moment.</p> : null}
+            {!data.status_breakdown.length ? <p className="rounded-xl bg-surface py-8 text-center text-sm text-ink-500">Aucune commande pour le moment.</p> : null}
           </div>
-        </section>
+        </Panel>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-4">
-          <h2 className="mb-4 font-bold text-slate-900">Repartition des paiements</h2>
-          <div className="space-y-3">
+        <Panel title="Repartition des paiements">
+          <div className="space-y-4">
             {data.payment_breakdown.map((item) => (
               <ProgressRow key={item.status} label={paymentStatusLabels[item.status] || item.status} value={item.count} total={summary.total_orders} />
             ))}
-            {!data.payment_breakdown.length ? <p className="text-sm text-slate-500">Aucun paiement pour le moment.</p> : null}
+            {!data.payment_breakdown.length ? <p className="rounded-xl bg-surface py-8 text-center text-sm text-ink-500">Aucun paiement pour le moment.</p> : null}
           </div>
-        </section>
+        </Panel>
       </div>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="font-bold text-slate-900">Produits les plus performants</h2>
-          <span className="text-sm text-slate-500">{fmt(summary.products_count)} produit(s) actif(s)</span>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <RankingList
+            title="Produits les plus performants"
+            items={ranking}
+            emptyLabel="Aucune commande pour classer les produits."
+          />
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[620px] text-left text-sm">
-            <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
-              <tr>
-                <th className="py-2">Produit</th>
-                <th className="py-2">Commandes</th>
-                <th className="py-2">Chiffre d'affaires</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.top_products.map((item) => (
-                <tr key={item.product_id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-3 font-semibold text-slate-900">{item.name}</td>
-                  <td className="py-3 text-slate-600">{fmt(item.orders_count)}</td>
-                  <td className="py-3 font-semibold text-emerald-700">{fmt(item.revenue)} FCFA</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {!data.top_products.length ? <p className="py-3 text-sm text-slate-500">Aucune commande pour classer les produits.</p> : null}
-        </div>
-      </section>
+        <Panel title="Activite">
+          <dl className="grid grid-cols-2 gap-3">
+            {[
+              ["Produits actifs", fmt(summary.products_count), ShoppingBag],
+              ["Clics WhatsApp", fmt(summary.whatsapp_clicks), MessageCircle],
+              ["Ventes du mois", `${fmt(summary.monthly_sales)} FCFA`, BarChart3],
+              ["Commandes semaine", fmt(summary.orders_week), ShoppingBag],
+            ].map(([label, value, Icon]) => (
+              <div key={label} className="rounded-xl bg-surface px-3 py-3">
+                <dt className="flex items-center gap-1.5 text-xs text-ink-500"><Icon size={13} aria-hidden="true" /> {label}</dt>
+                <dd className="mt-1 truncate text-sm font-bold text-ink-900">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </Panel>
+      </div>
     </div>
   );
 }

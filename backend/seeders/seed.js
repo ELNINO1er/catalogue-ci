@@ -112,6 +112,8 @@ async function seed() {
     { key: "country", value: "CI" },
     { key: "platform_wave_number", value: "2250700000000" },
     { key: "platform_wave_name", value: "CatalogueCI SAS" },
+    // Mode lancement gratuit : passer a "true" depuis les reglages admin pour activer les abonnements payants.
+    { key: "billing_enabled", value: "false" },
     { key: "platform_payment_instructions", value: "Envoyez le montant exact sur le numero Wave ci-dessus, puis entrez la reference de la transaction." },
   ];
   for (const setting of settingsData) {
