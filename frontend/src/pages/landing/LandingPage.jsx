@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  ArrowLeft, ArrowRight, BadgeCheck, Check, Mail, MapPin, Menu, MessageCircle, QrCode, Search, ShoppingBag, Store, X,
+  Bell, ChevronDown, ChevronRight, Facebook, Home, Instagram, Mail, MapPin, Menu, MessageCircle, Music2, Search,
+  ShoppingBag, Store, User, X,
 } from "lucide-react";
 import { navigate } from "../../utils/navigation";
 import IvoryCoastMap from "./IvoryCoastMap";
 import CitySelect from "./CitySelect";
-import HowItWorks from "./HowItWorks";
-import { useCountUp, useInView, useParallax, useReveal } from "./useLandingMotion";
+import { useCountUp, useInView, useReveal } from "./useLandingMotion";
 
+// Reproduction de la maquette video (Campy) aux couleurs CatalogueCI :
+// bleu de la maquette -> orange (brand), noir-bleu -> encre (ink).
 const SUPPORT_EMAIL = "support@catalogueci.com";
 const IMG = (name) => `/landing/${name}.webp`;
 
@@ -19,40 +21,116 @@ function goTo(path) {
   };
 }
 
-function Eyebrow({ children, light = false }) {
+/* ───── Petits dessins a main levee de la maquette ───── */
+// Trois traits rayonnants (devant les titres de section)
+function Sparkle({ className = "", tone = "text-brand-500" }) {
   return (
-    <p className={`inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] ${light ? "text-white/80" : "text-brand-600"}`}>
-      <span className={`h-px w-6 ${light ? "bg-white/60" : "bg-brand-500"}`} /> {children}
-    </p>
+    <svg viewBox="0 0 32 32" className={`h-7 w-7 ${tone} ${className}`} aria-hidden="true">
+      <g stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" fill="none">
+        <path className="draw-path" pathLength="1" d="M4 14 L12 20" />
+        <path className="draw-path" pathLength="1" d="M15 4 L16 14" />
+        <path className="draw-path" pathLength="1" d="M3 26 L10 25" />
+      </g>
+    </svg>
   );
 }
 
-/* Trait de feutre sous un mot, qui se dessine a l'arrivee */
-function Underlined({ children }) {
+// Eclat a la fin d'un titre (orange dans la maquette)
+function Spark({ className = "" }) {
+  return (
+    <svg viewBox="0 0 28 28" className={`inline-block h-6 w-6 text-brand-500 ${className}`} aria-hidden="true">
+      <g stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" fill="none">
+        <path className="draw-path" pathLength="1" d="M6 4 L8 14" />
+        <path className="draw-path" pathLength="1" d="M20 2 L13 14" />
+        <path className="draw-path" pathLength="1" d="M24 14 L15 18" />
+      </g>
+    </svg>
+  );
+}
+
+// Gribouillis du hero (traits + boucle), a cote de la premiere ligne
+function HeroDoodle({ className = "" }) {
+  return (
+    <svg viewBox="0 0 120 80" className={`text-brand-500 ${className}`} aria-hidden="true">
+      <g stroke="currentColor" strokeWidth="3" strokeLinecap="round" fill="none">
+        <path className="draw-path" pathLength="1" d="M8 34 C 20 42, 30 50, 38 54" />
+        <path className="draw-path" pathLength="1" d="M34 8 L44 40" />
+        <path className="draw-path" pathLength="1" d="M58 4 L52 38" />
+        <path className="draw-path" pathLength="1" d="M48 50 C 62 28, 92 26, 100 46 C 106 60, 90 66, 84 56" />
+      </g>
+    </svg>
+  );
+}
+
+// Trait de pinceau sous les derniers mots du titre
+function Brush({ children }) {
   return (
     <span className="relative inline-block whitespace-nowrap">
       {children}
-      <svg viewBox="0 0 300 20" preserveAspectRatio="none" className="absolute -bottom-1.5 left-0 h-3 w-full text-brand-500" aria-hidden="true">
-        <path className="draw-path" pathLength="1" d="M4 13 C 80 5, 170 5, 296 9" stroke="currentColor" strokeWidth="5" strokeLinecap="round" fill="none" />
+      <svg viewBox="0 0 320 24" preserveAspectRatio="none" className="absolute -bottom-2 left-[-2%] h-4 w-[104%] text-brand-500" aria-hidden="true">
+        <path className="draw-path" pathLength="1" d="M4 15 C 70 9, 150 6, 316 11" stroke="currentColor" strokeWidth="5" strokeLinecap="round" fill="none" />
+        <path className="draw-path" pathLength="1" d="M60 19 C 140 14, 220 14, 300 16" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.7" />
       </svg>
     </span>
   );
 }
 
+function Cloud({ className = "" }) {
+  return (
+    <svg viewBox="0 0 120 50" className={`drop-shadow-[0_6px_10px_rgba(17,24,39,0.06)] ${className}`} aria-hidden="true">
+      <path d="M22 44 C 8 44 4 32 14 27 C 12 16 26 10 34 17 C 38 6 58 4 64 15 C 72 8 88 12 88 24 C 100 22 110 30 104 40 C 102 43 98 44 94 44 Z" fill="white" />
+    </svg>
+  );
+}
+
+function Birds({ className = "" }) {
+  return (
+    <svg viewBox="0 0 40 70" className={`text-brand-400 ${className}`} aria-hidden="true">
+      {[[8, 6], [24, 26], [12, 50]].map(([x, y], i) => (
+        <g key={i} className="flap" style={{ animationDelay: `${i * 0.3}s`, transformBox: "fill-box" }}>
+          <path d={`M${x} ${y} l5 5 l5 -5`} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+function Swirl({ className = "", d = "M10 90 C 60 70, 40 10, 90 20 C 130 28, 110 80, 70 70 C 40 62, 70 20, 150 10" }) {
+  return (
+    <svg viewBox="0 0 160 100" className={`reveal-group text-ink-300 ${className}`} aria-hidden="true">
+      <path className="draw-path" pathLength="1" d={d} stroke="currentColor" strokeWidth="1.2" fill="none" />
+    </svg>
+  );
+}
+
 /* ───── Navigation ───── */
-const NAV_LINKS = [
-  { href: "#fonctionnement", label: "Fonctionnement" },
-  { href: "#commerces", label: "Commerces" },
-  { href: "#villes", label: "Partout en CI" },
-  { href: "#faq", label: "FAQ" },
+const NAV = [
+  { href: "#accueil", label: "Accueil" },
+  { href: "#atouts", label: "Atouts" },
+  { href: "#commerces", label: "Commerces", menu: true },
+  { href: "#faq", label: "Contact" },
+  { href: "#villes", label: "Villes" },
 ];
+const COMMERCE_LINKS = ["Maquis et restaurants", "Couture et pagnes", "Coiffure et beaute", "Epicerie et marche"];
+
+function Logo({ light = false }) {
+  return (
+    <span className="flex items-center gap-2.5">
+      <span className={`grid h-9 w-9 place-items-center rounded-[0.9rem] rounded-b-md ${light ? "bg-white text-brand-500" : "bg-brand-500 text-white"}`}>
+        <ShoppingBag size={18} strokeWidth={2.4} />
+      </span>
+      <span className={`font-landing text-xl font-bold tracking-tight ${light ? "text-white" : "text-ink-900"}`}>CatalogueCI.</span>
+    </span>
+  );
+}
 
 function Navbar({ onLogin, onRegister }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const [menu, setMenu] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
+    const onScroll = () => setScrolled(window.scrollY > 10);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -60,42 +138,54 @@ function Navbar({ onLogin, onRegister }) {
 
   return (
     <header className={`sticky top-0 z-40 transition-[background-color,box-shadow] duration-300 ${scrolled || open ? "bg-white/90 shadow-card backdrop-blur-md" : "bg-transparent"}`}>
-      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4" aria-label="Navigation principale">
-        <a href="/" className="flex items-center gap-2.5" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-500 text-white"><ShoppingBag size={18} /></span>
-          <span className="font-display text-lg font-bold text-ink-900">CatalogueCI</span>
-        </a>
+      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-5 py-5" aria-label="Navigation principale">
+        <a href="#accueil" className="seq-down" style={{ "--d": "0ms" }}><Logo /></a>
 
-        <div className="hidden items-center gap-7 text-sm font-medium text-ink-600 md:flex">
-          {NAV_LINKS.map((link) => (
-            <a key={link.href} href={link.href} className="group relative py-1 transition-colors hover:text-ink-900">
-              {link.label}
-              <span className="absolute inset-x-0 -bottom-0.5 h-0.5 origin-left scale-x-0 rounded-full bg-brand-500 transition-transform duration-300 group-hover:scale-x-100" />
-            </a>
+        <ul className="hidden items-center gap-10 text-[0.95rem] text-ink-700 md:flex">
+          {NAV.map((item, i) => (
+            <li key={item.label} className="seq-down relative" style={{ "--d": `${120 + i * 80}ms` }} onMouseLeave={() => item.menu && setMenu(false)}>
+              <a
+                href={item.href}
+                onMouseEnter={() => item.menu && setMenu(true)}
+                className={`group relative flex items-center gap-1 py-1 transition-colors hover:text-ink-900 ${i === 0 ? "text-ink-900" : ""}`}
+              >
+                {item.label}
+                {item.menu ? <ChevronDown size={14} className="text-brand-500" /> : null}
+                {/* Petit trait sous le lien actif (Accueil), comme la maquette */}
+                <span className={`absolute -bottom-1.5 left-1/2 h-[3px] w-4 -translate-x-1/2 rounded-full bg-brand-500 transition-transform duration-300 ${i === 0 ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"}`} />
+              </a>
+              {item.menu ? (
+                <div className={`absolute left-1/2 top-full z-10 w-56 -translate-x-1/2 pt-3 transition duration-200 ${menu ? "visible translate-y-0 opacity-100" : "invisible -translate-y-1 opacity-0"}`}>
+                  <div className="rounded-2xl border border-surface-border bg-white p-2 shadow-modal">
+                    {COMMERCE_LINKS.map((label) => (
+                      <a key={label} href="#commerces" onClick={() => setMenu(false)} className="block rounded-xl px-3 py-2 text-sm text-ink-700 hover:bg-brand-50 hover:text-brand-700">{label}</a>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </li>
           ))}
+        </ul>
+
+        <div className="hidden items-center gap-3 sm:flex">
+          <button onClick={onLogin} className="seq-down rounded-full bg-ink-900 px-7 py-2.5 text-sm font-medium text-white transition hover:bg-ink-800" style={{ "--d": "560ms" }}>Connexion</button>
+          <button onClick={onRegister} className="seq-down rounded-full border border-ink-800 px-6 py-2.5 text-sm font-medium text-ink-900 transition hover:bg-ink-900 hover:text-white" style={{ "--d": "680ms" }}>Inscription</button>
         </div>
 
-        <div className="hidden items-center gap-2 sm:flex">
-          <button onClick={onLogin} className="rounded-full px-4 py-2 text-sm font-semibold text-ink-700 transition hover:text-ink-900">Connexion</button>
-          <button onClick={onRegister} className="rounded-full bg-ink-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-ink-800 active:translate-y-0">
-            Creer ma boutique
-          </button>
-        </div>
-
-        <button onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label={open ? "Fermer le menu" : "Ouvrir le menu"} className="rounded-xl p-2 text-ink-800 hover:bg-ink-100 sm:hidden">
+        <button onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label={open ? "Fermer le menu" : "Ouvrir le menu"} className="rounded-xl p-2 text-ink-800 hover:bg-ink-100 md:hidden">
           {open ? <X size={22} /> : <Menu size={22} />}
         </button>
       </nav>
 
-      <div className={`grid transition-[grid-template-rows] duration-300 ease-out sm:hidden ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+      <div className={`grid transition-[grid-template-rows] duration-300 ease-out md:hidden ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
         <div className="overflow-hidden">
           <div className="space-y-1 border-t border-surface-border px-5 pb-5 pt-3">
-            {NAV_LINKS.map((link) => (
-              <a key={link.href} href={link.href} onClick={() => setOpen(false)} className="block rounded-xl px-3 py-2.5 text-sm font-medium text-ink-700 hover:bg-ink-50">{link.label}</a>
+            {NAV.map((item) => (
+              <a key={item.label} href={item.href} onClick={() => setOpen(false)} className="block rounded-xl px-3 py-2.5 text-sm text-ink-700 hover:bg-ink-50">{item.label}</a>
             ))}
             <div className="grid grid-cols-2 gap-2 pt-2">
-              <button onClick={onLogin} className="rounded-full border border-ink-300 py-2.5 text-sm font-semibold text-ink-800">Connexion</button>
-              <button onClick={onRegister} className="rounded-full bg-ink-900 py-2.5 text-sm font-semibold text-white">Creer ma boutique</button>
+              <button onClick={onLogin} className="rounded-full bg-ink-900 py-2.5 text-sm font-medium text-white">Connexion</button>
+              <button onClick={onRegister} className="rounded-full border border-ink-800 py-2.5 text-sm font-medium text-ink-900">Inscription</button>
             </div>
           </div>
         </div>
@@ -104,103 +194,117 @@ function Navbar({ onLogin, onRegister }) {
   );
 }
 
-/* ───── Hero : photo reelle + apercus de l'interface ───── */
-const PHONE_PRODUCTS = [
-  { name: "Riz gras poisson", price: "2 500", img: "plat-jollof" },
-  { name: "Brochettes", price: "1 500", img: "plat-brochettes" },
-  { name: "Poulet braise", price: "3 500", img: "plat-poulet" },
-  { name: "Assiette du jour", price: "2 000", img: "plat-street" },
-];
+/* ───── Hero : la main tient le telephone, l'ecran affiche l'appli ───── */
+function PhoneScreen() {
+  return (
+    <div className="flex h-full flex-col bg-white font-landing text-ink-900">
+      {/* Encoche de l'iPhone */}
+      <div className="absolute left-1/2 top-0 z-10 h-[4%] w-[52%] -translate-x-1/2 rounded-b-2xl bg-black" />
+
+      <div className="seq relative overflow-hidden bg-gradient-to-b from-brand-100 to-brand-50 px-3 pb-4 pt-7" style={{ "--d": "900ms" }}>
+        <Cloud className="drift absolute -right-3 top-6 w-16 opacity-90" />
+        <Cloud className="drift-slow absolute left-10 top-12 w-12 opacity-80" />
+        <div className="relative flex items-center justify-between">
+          <span className="flex flex-col gap-[3px]"><span className="h-[2px] w-3 rounded bg-ink-800" /><span className="h-[2px] w-2 rounded bg-ink-800" /></span>
+          <span className="flex items-center gap-1 rounded-full bg-white px-1.5 py-0.5 shadow-sm">
+            <img src={IMG("client-2")} alt="" className="h-3.5 w-3.5 rounded-full object-cover" />
+            <span className="text-[7px] font-semibold">Awa</span>
+          </span>
+        </div>
+        <p className="relative mt-3 text-[13px] font-bold leading-tight">Votre boutique<br />en un clic.</p>
+      </div>
+
+      <div className="seq flex-1 space-y-2 px-3 pt-2.5" style={{ "--d": "1150ms" }}>
+        <div className="flex items-center justify-between">
+          <p className="text-[9px] font-bold">Recommandes</p>
+          <p className="flex items-center text-[7px] text-ink-400">Voir tout <ChevronRight size={8} /></p>
+        </div>
+        <div className="flex gap-1.5 overflow-hidden">
+          {[
+            { img: "plat-jollof", name: "Riz gras", price: "2 500 F" },
+            { img: "plat-brochettes", name: "Brochettes", price: "1 500 F" },
+          ].map((p) => (
+            <div key={p.name} className="relative w-[62%] shrink-0 overflow-hidden rounded-xl shadow-card">
+              <img src={IMG(p.img)} alt="" className="h-[4.6rem] w-full object-cover" />
+              <div className="absolute inset-x-1 bottom-1 rounded-lg bg-white/90 px-1.5 py-0.5">
+                <p className="text-[7px] font-bold">{p.name}</p>
+                <p className="text-[6px] text-brand-600">{p.price}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="seq flex items-center justify-between pt-1" style={{ "--d": "1400ms" }}>
+          <p className="text-[9px] font-bold">Mes commandes</p>
+          <p className="flex items-center text-[7px] text-ink-400">Voir <ChevronRight size={8} /></p>
+        </div>
+        <div className="seq flex items-center gap-2 rounded-xl bg-surface p-1.5" style={{ "--d": "1550ms" }}>
+          <img src={IMG("plat-poulet")} alt="" className="h-7 w-7 rounded-lg object-cover" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[7px] font-semibold">Poulet braise x2</p>
+            <p className="text-[6px] text-ink-400">12:41 · Riviera</p>
+          </div>
+          <span className="rounded-full bg-brand-500 px-1.5 py-0.5 text-[6px] font-semibold text-white">Payee</span>
+        </div>
+      </div>
+
+      <div className="seq flex items-center justify-around border-t border-surface-border px-2 py-2 text-ink-300" style={{ "--d": "1700ms" }}>
+        <Home size={11} className="text-brand-500" />
+        <Bell size={11} />
+        <span className="grid h-6 w-6 place-items-center rounded-full bg-brand-500 text-white shadow-card"><Search size={10} /></span>
+        <MessageCircle size={11} />
+        <User size={11} />
+      </div>
+    </div>
+  );
+}
 
 function HeroVisual() {
-  const phoneRef = useParallax(-0.06);
-  const cardRef = useParallax(0.05);
-
   return (
-    <div className="relative mx-auto w-full max-w-[34rem] pb-10 pl-6 sm:pl-10">
-      {/* Photo de la commercante */}
-      <div className="photo-reveal relative aspect-[5/6] w-[78%] rounded-[2rem] shadow-modal">
-        <img src={IMG("hero")} alt="Commercante dans sa boutique, telephone en main" className="h-full w-full rounded-[2rem] object-cover" fetchpriority="high" />
-      </div>
+    <div className="relative mx-auto aspect-square w-full max-w-[34rem]" aria-hidden="true">
+      {/* Arcs pointilles derriere le telephone */}
+      <svg viewBox="0 0 400 400" className="spin-slow absolute inset-[6%] h-[88%] w-[88%] text-ink-200">
+        <circle cx="200" cy="200" r="150" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="2 7" />
+        <circle cx="200" cy="200" r="190" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="120 40 6 40" />
+      </svg>
 
-      {/* Telephone : apercu reel d'un catalogue */}
-      <div ref={phoneRef} className="absolute bottom-0 right-0 w-[46%] min-w-[11rem]">
-        <div className="reveal reveal-right" style={{ "--i": 3 }}>
-          <div className="rounded-[2rem] bg-ink-900 p-1.5 shadow-modal">
-            <div className="overflow-hidden rounded-[1.6rem] bg-surface">
-              <div className="bg-brand-500 px-3 pb-5 pt-4 text-white">
-                <p className="text-[9px] text-white/75">Maquis · Cocody Angre</p>
-                <p className="font-display text-xs font-bold">Chez Tantie Awa</p>
-              </div>
-              <div className="-mt-3 grid grid-cols-2 gap-1.5 rounded-t-2xl bg-surface p-2">
-                {PHONE_PRODUCTS.map((p) => (
-                  <div key={p.name} className="rounded-xl bg-white p-1 shadow-card">
-                    <img src={IMG(p.img)} alt="" className="aspect-square w-full rounded-lg object-cover" loading="lazy" />
-                    <p className="mt-1 truncate px-0.5 text-[9px] font-semibold text-ink-800">{p.name}</p>
-                    <p className="px-0.5 pb-0.5 text-[9px] font-bold text-brand-600">{p.price} F</p>
-                  </div>
-                ))}
-              </div>
-              <div className="px-2 pb-3">
-                <div className="flex items-center justify-center gap-1 rounded-lg bg-whatsapp py-1.5 text-[9px] font-bold text-white">
-                  <MessageCircle size={10} /> Commander
-                </div>
-              </div>
-            </div>
-          </div>
+      <div className="seq-right absolute inset-0" style={{ "--d": "250ms" }}>
+        {/* Main et telephone (photo en noir et blanc, fond blanc fondu dans la page) */}
+        <img src={IMG("main-telephone")} alt="" className="absolute inset-0 h-full w-full object-contain" fetchpriority="high" />
+        {/* Ecran incruste exactement dans l'ecran de la photo */}
+        <div className="absolute overflow-hidden rounded-[1.6rem]" style={{ left: "33.2%", top: "9.1%", width: "35.3%", height: "76.8%", transform: "rotate(0.45deg)" }}>
+          <PhoneScreen />
         </div>
       </div>
 
-      {/* Notification de commande */}
-      <div ref={cardRef} className="absolute -right-4 top-[3%] hidden sm:block">
-        <div className="reveal reveal-right" style={{ "--i": 5 }}>
-          <div className="w-56 rounded-2xl bg-white p-3 shadow-modal">
-            <div className="flex items-center justify-between">
-              <span className="inline-flex items-center gap-1.5 text-2xs font-semibold text-emerald-700">
-                <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 motion-safe:animate-ping" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" /></span>
-                Nouvelle commande
-              </span>
-              <span className="text-2xs text-ink-400">a l'instant</span>
-            </div>
-            <p className="mt-2 text-sm font-semibold text-ink-900">Riz gras poisson x2</p>
-            <p className="text-xs text-ink-500">Koffi · Livraison Riviera 2</p>
-            <div className="mt-2 flex items-center justify-between border-t border-surface-border pt-2">
-              <span className="text-xs text-ink-500">Paye par Wave</span>
-              <span className="font-display text-sm font-bold text-ink-900">5 000 F</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Largeurs en % : les nuages restent a cote de l'ecran, meme sur mobile */}
+      <Cloud className="drift absolute left-[8%] top-[20%] w-[21%]" />
+      <Cloud className="drift-slow absolute right-[2%] top-[17%] w-[18%]" />
+      <Birds className="absolute right-[6%] top-[34%] w-7" />
+      <Swirl className="absolute bottom-[2%] right-[-4%] w-44" d="M4 80 C 40 60, 90 96, 120 70 C 140 52, 150 40, 156 30" />
     </div>
   );
 }
 
 function Hero({ onRegister }) {
   return (
-    <section className="draw-now relative">
-      <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 pb-16 pt-8 lg:grid-cols-[1fr_1.05fr] lg:pt-14">
-        <div className="text-center lg:text-left">
-          <div className="reveal" style={{ "--i": 0 }}><Eyebrow>Boutique en ligne · Cote d'Ivoire</Eyebrow></div>
-          <h1 className="reveal mt-5 font-display text-[2.6rem] font-bold leading-[1.08] tracking-tight text-ink-900 sm:text-6xl" style={{ "--i": 1 }}>
-            Vendez sur WhatsApp, mais <Underlined>en mieux.</Underlined>
+    <section id="accueil" className="draw-now relative overflow-hidden">
+      <div className="mx-auto grid max-w-6xl items-center gap-10 px-5 pb-20 pt-6 lg:grid-cols-[1.05fr_1fr] lg:pb-24">
+        <div className="relative">
+          <h1 className="font-landing text-[2.8rem] font-bold leading-[1.18] tracking-tight text-ink-900 sm:text-6xl lg:text-[4.2rem]">
+            <span className="seq block" style={{ "--d": "300ms" }}>
+              Vendez sur
+              <HeroDoodle className="absolute -top-9 left-[52%] hidden w-24 sm:block" />
+            </span>
+            <span className="seq block whitespace-nowrap" style={{ "--d": "450ms" }}>WhatsApp, mais</span>
+            <span className="seq block" style={{ "--d": "600ms" }}><Brush>en mieux !</Brush></span>
           </h1>
-          <p className="reveal mx-auto mt-6 max-w-md text-[1.05rem] leading-relaxed text-ink-500 lg:mx-0" style={{ "--i": 2 }}>
-            Vos produits, vos prix et vos photos sur une vraie page. Le client commande, paie avec Wave, et vous recevez tout au meme endroit.
+          <p className="seq mt-7 max-w-md font-landing text-lg leading-relaxed text-ink-500" style={{ "--d": "800ms" }}>
+            Vos produits, vos prix et vos photos sur une seule page. Vos clients commandent et paient avec Wave.
           </p>
-          <div className="reveal mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start" style={{ "--i": 3 }}>
-            <button onClick={onRegister} className="group inline-flex items-center gap-2 rounded-full bg-brand-500 px-7 py-3.5 text-sm font-semibold text-white shadow-card-hover transition hover:-translate-y-0.5 hover:bg-brand-600 active:translate-y-0">
-              Creer ma boutique gratuitement
-              <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
-            </button>
-            <a href="#fonctionnement" className="rounded-full border border-ink-200 px-6 py-3.5 text-sm font-semibold text-ink-800 transition hover:border-ink-900">
-              Comment ca marche
-            </a>
-          </div>
-          <ul className="reveal mt-8 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-ink-500 lg:justify-start" style={{ "--i": 4 }}>
-            {["Pret en 5 minutes", "Sans site web", "Gratuit au lancement"].map((t) => (
-              <li key={t} className="flex items-center gap-1.5"><Check size={15} className="text-emerald-600" /> {t}</li>
-            ))}
-          </ul>
+          <button onClick={onRegister} className="seq mt-9 rounded-full bg-ink-900 px-9 py-4 font-landing text-base font-medium text-white shadow-card-hover transition hover:-translate-y-0.5 hover:bg-ink-800" style={{ "--d": "950ms" }}>
+            Creer ma boutique
+          </button>
         </div>
 
         <HeroVisual />
@@ -209,138 +313,60 @@ function Hero({ onRegister }) {
   );
 }
 
-/* ───── Bandeau defilant des commerces ───── */
-const TRADES = ["Maquis", "Boutique de pagnes", "Salon de tresses", "Patisserie", "Epicerie", "Vente de credit", "Friperie", "Cosmetiques", "Traiteur", "Telephonie", "Couture", "Garba"];
-
-function Marquee() {
-  const items = [...TRADES, ...TRADES];
-  return (
-    <div className="marquee overflow-hidden border-y border-surface-border bg-white py-4" aria-label="Types de commerces">
-      <div className="marquee-track flex w-max items-center gap-8">
-        {items.map((t, i) => (
-          <span key={`${t}-${i}`} className="flex items-center gap-8 whitespace-nowrap font-display text-lg font-semibold text-ink-300" aria-hidden={i >= TRADES.length}>
-            {t} <span className="h-1.5 w-1.5 rounded-full bg-brand-400" />
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ───── Chiffres (faits reels, pas de statistiques inventees) ───── */
-const FACTS = [
-  { value: 5, suffix: " min", label: "pour mettre sa boutique en ligne" },
-  { value: 0, suffix: " FCFA", label: "pendant toute la phase de lancement" },
-  { value: 24, suffix: "h/24", label: "vos clients peuvent commander" },
-  { value: 3, suffix: "", label: "moyens de paiement : Wave, livraison, WhatsApp" },
+/* ───── Bande de chiffres ───── */
+const STATS = [
+  { value: 5, suffix: " min", label: ["Pour creer", "sa boutique"] },
+  { value: 0, suffix: " F", label: ["Pendant le", "lancement"] },
+  { value: 24, suffix: "h/24", label: ["Vos clients", "commandent"] },
+  { value: 3, suffix: "", label: ["Moyens de", "paiement"] },
 ];
 
-function Fact({ value, suffix, label, start, index }) {
-  const count = useCountUp(value, start);
+function Stat({ value, suffix, label, start }) {
+  const n = useCountUp(value, start);
   return (
-    <div className={`px-2 py-2 ${index ? "lg:border-l lg:border-white/20 lg:pl-8" : ""}`}>
-      <p className="whitespace-nowrap font-display text-4xl font-bold tabular-nums">{count}{suffix}</p>
-      <p className="mt-1 max-w-[13rem] text-sm leading-snug text-white/80">{label}</p>
+    <div className="flex items-center justify-center gap-3 px-4 py-2">
+      <span className="whitespace-nowrap font-landing text-4xl font-medium tabular-nums lg:text-5xl">{n}{suffix}</span>
+      <span className="text-xs leading-tight text-white/80">{label[0]}<br />{label[1]}</span>
     </div>
   );
 }
 
-function FactsBand() {
+function StatsBand() {
   const [ref, inView] = useInView({ threshold: 0.4 });
   return (
-    <section className="px-5 pt-16">
-      <div ref={ref} className="reveal mx-auto grid max-w-6xl gap-6 rounded-[2rem] bg-brand-500 px-8 py-10 text-white sm:grid-cols-2 lg:grid-cols-4">
-        {FACTS.map((fact, i) => <Fact key={fact.label} {...fact} index={i} start={inView} />)}
+    <section ref={ref} className="reveal bg-brand-500 text-white">
+      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-y-6 px-5 py-9 lg:grid-cols-4 lg:divide-x lg:divide-white/25">
+        {STATS.map((s) => <Stat key={s.suffix + s.label[0]} {...s} start={inView} />)}
       </div>
     </section>
   );
 }
 
-/* ───── Commerces (photos reelles) ───── */
-// Exemples d'utilisation illustres par des photos libres, pas des temoignages de clients.
-const USE_CASES = [
-  { img: "cas-maquis", title: "Maquis et restaurants", text: "Le menu du jour en photos, les commandes a emporter et les paiements Wave sans erreur de montant." },
-  { img: "cas-mode", title: "Couture et pagnes", text: "Chaque modele avec la taille et le tissu demandes au client. Plus besoin d'envoyer dix photos par conversation." },
-  { img: "cas-coiffure", title: "Coiffure et beaute", text: "Vos prestations et vos prix affiches clairement. La cliente choisit et indique le jour qui lui convient." },
-  { img: "cas-services", title: "Services et credit", text: "Abonnements, recharges, graphisme : un lien a partager, une commande claire, un paiement verifie." },
-  { img: "cas-patisserie", title: "Boulangerie et patisserie", text: "Les commandes pour les fetes avec la date de retrait et les precisions, au meme endroit." },
-  { img: "cas-epicerie", title: "Epicerie et marche", text: "Le client commande, paie a la livraison ou par Wave, et suit sa commande avec son numero." },
+/* ───── Atouts : 3 icones 3D ───── */
+const FEATURES = [
+  { icon: "icone-catalogue", title: "Catalogue et QR code", text: "Vos produits avec photos et prix sur une page a votre nom." },
+  { icon: "icone-whatsapp", title: "Commandes WhatsApp", text: "La commande arrive complete, avec le bon produit et le bon prix." },
+  { icon: "icone-paiement", title: "Paiement Wave", text: "Wave, a la livraison ou sur WhatsApp : vous choisissez." },
 ];
 
-function UseCases() {
-  const trackRef = useRef(null);
-  const [edges, setEdges] = useState({ start: true, end: false });
-  const [current, setCurrent] = useState(0);
-
-  function updateEdges() {
-    const el = trackRef.current;
-    if (!el) return;
-    setEdges({ start: el.scrollLeft <= 4, end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 });
-    const card = el.querySelector("article");
-    if (card) setCurrent(Math.min(USE_CASES.length - 1, Math.round(el.scrollLeft / (card.offsetWidth + 24))));
-  }
-
-  function scrollToCard(index) {
-    const el = trackRef.current;
-    const card = el?.querySelectorAll("article")[index];
-    if (card) el.scrollTo({ left: card.offsetLeft - el.offsetLeft - 20, behavior: "smooth" });
-  }
-
-  function scroll(direction) {
-    const el = trackRef.current;
-    if (!el) return;
-    const card = el.querySelector("article");
-    el.scrollBy({ left: direction * ((card?.offsetWidth || 300) + 24), behavior: "smooth" });
-  }
-
-  useEffect(() => {
-    updateEdges();
-    window.addEventListener("resize", updateEdges);
-    return () => window.removeEventListener("resize", updateEdges);
-  }, []);
-
-  const arrow = "grid h-11 w-11 place-items-center rounded-full border border-ink-200 text-ink-700 transition hover:border-ink-900 hover:bg-ink-900 hover:text-white disabled:pointer-events-none disabled:opacity-30";
-
+function Features() {
   return (
-    <section id="commerces" className="scroll-mt-24 bg-white py-24">
-      <div className="mx-auto max-w-6xl px-5">
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <div className="reveal max-w-xl">
-            <Eyebrow>Pour qui ?</Eyebrow>
-            <h2 className="mt-4 font-display text-3xl font-bold leading-tight tracking-tight text-ink-900 sm:text-[2.6rem]">Pense pour les commerces d'ici</h2>
-          </div>
-          <div className="reveal flex gap-2">
-            <button onClick={() => scroll(-1)} disabled={edges.start} aria-label="Precedent" className={arrow}><ArrowLeft size={18} /></button>
-            <button onClick={() => scroll(1)} disabled={edges.end} aria-label="Suivant" className={arrow}><ArrowRight size={18} /></button>
-          </div>
+    <section id="atouts" className="scroll-mt-24 pt-24">
+      <div className="mx-auto grid max-w-6xl gap-12 px-5 lg:grid-cols-[1fr_2fr]">
+        <div className="reveal relative">
+          <Sparkle className="absolute -left-7 -top-6" />
+          <h2 className="font-landing text-[2.4rem] font-bold leading-[1.2] text-ink-900">C'est comme ca<br />qu'on vend !</h2>
+          <p className="mt-5 max-w-xs font-landing text-[1.05rem] leading-relaxed text-ink-500">Profitez de tous les avantages en utilisant nos services.</p>
         </div>
-
-        <div
-          ref={trackRef}
-          onScroll={updateEdges}
-          className="-mx-5 mt-10 flex snap-x snap-mandatory scroll-px-5 gap-6 overflow-x-auto scroll-smooth px-5 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {USE_CASES.map(({ img, title, text }, i) => (
-            <article key={title} className="reveal group w-[82%] shrink-0 snap-start sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]" style={{ "--i": Math.min(i, 3) }}>
-              <div className="overflow-hidden rounded-3xl">
-                <img src={IMG(img)} alt={title} loading="lazy" className="aspect-[3/2] w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" />
+        <div className="grid gap-10 sm:grid-cols-3">
+          {FEATURES.map(({ icon, title, text }, i) => (
+            <div key={title}>
+              <img src={IMG(icon)} alt="" className="reveal reveal-icon h-16 w-16 object-contain drop-shadow-[0_8px_10px_rgba(17,24,39,0.12)]" style={{ "--i": i + 1 }} />
+              <div className="reveal" style={{ "--i": i + 3 }}>
+                <h3 className="mt-5 font-landing text-lg font-bold text-ink-900">{title}</h3>
+                <p className="mt-3 font-landing text-[0.95rem] leading-relaxed text-ink-500">{text}</p>
               </div>
-              <h3 className="mt-5 font-display text-lg font-bold text-ink-900">{title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-ink-500">{text}</p>
-            </article>
-          ))}
-        </div>
-
-        {/* Position dans le carrousel */}
-        <div className="mt-4 flex items-center justify-center gap-2" aria-label="Choisir un commerce">
-          {USE_CASES.map(({ title }, i) => (
-            <button
-              key={title}
-              onClick={() => scrollToCard(i)}
-              aria-label={title}
-              aria-current={i === current ? "true" : undefined}
-              className={`h-2 rounded-full transition-all duration-300 ${i === current ? "w-8 bg-brand-500" : "w-2 bg-ink-200 hover:bg-ink-300"}`}
-            />
+            </div>
           ))}
         </div>
       </div>
@@ -348,10 +374,10 @@ function UseCases() {
   );
 }
 
-/* ───── Carte : partout en Cote d'Ivoire ───── */
+/* ───── Carte + recherche ───── */
 const CITIES = ["Abidjan", "Bouake", "Yamoussoukro", "San-Pedro", "Korhogo", "Daloa", "Man", "Autre ville"];
 
-function MapSection() {
+function MapSearch() {
   const [shop, setShop] = useState("");
   const [city, setCity] = useState("Abidjan");
 
@@ -365,28 +391,25 @@ function MapSection() {
   }
 
   return (
-    <section id="villes" className="scroll-mt-24 py-24">
-      <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 md:grid-cols-2">
+    <section id="villes" className="relative scroll-mt-24 overflow-hidden pb-24 pt-16">
+      <Swirl className="absolute right-[4%] top-10 hidden w-40 lg:block" d="M150 8 C 100 30, 150 60, 120 80 C 92 98, 60 70, 96 52 C 120 40, 60 30, 10 44" />
+      <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 lg:grid-cols-2">
         <IvoryCoastMap />
         <div className="reveal reveal-right">
-          <Eyebrow>Partout en Cote d'Ivoire</Eyebrow>
-          <h2 className="mt-4 font-display text-3xl font-bold leading-tight tracking-tight text-ink-900 sm:text-[2.6rem]">
-            D'Abidjan a Korhogo, votre boutique ouvre aujourd'hui.
-          </h2>
-          <p className="mt-4 max-w-md text-ink-500">Donnez-lui un nom, choisissez votre ville. Le reste se fait en quelques minutes.</p>
+          <h2 className="font-landing text-[2.4rem] font-bold leading-[1.2] text-ink-900">Maquis, boutique,<br />salon… qu'est-ce qu'il<br />vous faut de plus ?</h2>
+          <p className="mt-5 max-w-md font-landing text-[1.05rem] leading-relaxed text-ink-500">Des commerces dans toute la Cote d'Ivoire. Trouvez le nom de votre boutique et ouvrez-la maintenant.</p>
 
-          <form onSubmit={start} className="mt-8 flex flex-col gap-1 rounded-[1.75rem] bg-white p-2 shadow-card-hover ring-1 ring-surface-border sm:flex-row sm:items-center sm:rounded-full">
+          <form onSubmit={start} className="mt-9 flex flex-col gap-1 rounded-[1.6rem] bg-white p-2 shadow-modal sm:flex-row sm:items-center sm:rounded-full">
             <label className="flex flex-1 items-center gap-3 rounded-full px-4 py-2">
-              <Store size={18} className="shrink-0 text-brand-500" />
+              <Store size={20} className="shrink-0 text-brand-500" />
               <span className="min-w-0 flex-1">
-                <span className="block text-xs font-semibold text-ink-900">Ma boutique</span>
-                <input value={shop} onChange={(e) => setShop(e.target.value)} placeholder="Nom de votre boutique" className="w-full bg-transparent text-sm text-ink-700 outline-none placeholder:text-ink-400" />
+                <span className="flex items-center gap-1 font-landing text-sm font-semibold text-ink-900">Boutique <ChevronDown size={13} /></span>
+                <input value={shop} onChange={(e) => setShop(e.target.value)} placeholder="Nom de votre boutique" className="w-full bg-transparent font-landing text-sm text-ink-600 outline-none placeholder:text-ink-400" />
               </span>
             </label>
-            <span className="hidden h-8 w-px bg-surface-border sm:block" />
             <div className="sm:w-48"><CitySelect value={city} onChange={setCity} options={CITIES} /></div>
-            <button type="submit" aria-label="Creer ma boutique" className="mt-1 grid h-12 w-full shrink-0 place-items-center rounded-full bg-ink-900 text-white transition hover:bg-brand-600 sm:mt-0 sm:w-12">
-              <Search size={18} />
+            <button type="submit" aria-label="Creer ma boutique" className="mt-1 grid h-14 w-full shrink-0 place-items-center rounded-full bg-ink-900 text-white transition hover:bg-brand-600 sm:mt-0 sm:w-14">
+              <Search size={20} />
             </button>
           </form>
         </div>
@@ -395,69 +418,158 @@ function MapSection() {
   );
 }
 
-/* ───── Partage : vrais visages ───── */
-const FACES = [
-  { img: "client-1", pos: "left-[4%] top-[16%]", delay: "0s" },
-  { img: "client-2", pos: "right-[8%] top-[4%]", delay: "1.1s" },
-  { img: "client-3", pos: "left-[14%] bottom-[8%]", delay: "0.6s" },
-  { img: "client-4", pos: "right-[2%] bottom-[24%]", delay: "1.8s" },
-  { img: "client-5", pos: "left-[44%] -top-[2%]", delay: "2.4s" },
+/* ───── Communaute ───── */
+const PEOPLE = [
+  { img: "client-1", pos: "left-[6%] top-[10%]", ring: "ring-emerald-100", size: "h-[4.5rem] w-[4.5rem]" },
+  { img: "client-4", pos: "right-[10%] top-[16%]", ring: "ring-violet-100", size: "h-16 w-16" },
+  { img: "client-3", pos: "right-[2%] top-[46%]", ring: "ring-orange-100", size: "h-[4.5rem] w-[4.5rem]" },
+  { img: "client-5", pos: "left-[4%] bottom-[10%]", ring: "ring-rose-100", size: "h-[4.75rem] w-[4.75rem]" },
+  { img: "client-2", pos: "right-[22%] bottom-[12%]", ring: "ring-amber-100", size: "h-14 w-14" },
 ];
 const BUBBLES = [
-  { text: "C'est combien le pagne ?", pos: "left-[-2%] top-[44%]", i: 1 },
-  { text: "Je prends 2 !", pos: "right-[-2%] top-[42%]", i: 3 },
-  { text: "Livraison a Yopougon ?", pos: "left-[28%] bottom-[-2%]", i: 5 },
+  { text: "Akwaba !!", pos: "left-[28%] top-[34%]" },
+  { text: "On y va !!", pos: "right-[14%] top-[8%]" },
+  { text: "Je commande !!", pos: "right-[18%] bottom-[28%]" },
+];
+const SOCIALS = [
+  { icon: Facebook, pos: "left-[42%] top-[2%]", color: "text-blue-600" },
+  { icon: Instagram, pos: "left-[18%] top-[48%]", color: "text-pink-600" },
+  { icon: Music2, pos: "left-[44%] bottom-[4%]", color: "text-ink-900" },
 ];
 
 function Community({ onRegister }) {
   return (
-    <section className="bg-white py-24">
-      <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 md:grid-cols-2">
-        <div className="reveal-group relative order-1 mx-auto aspect-square w-full max-w-md" aria-hidden="true">
-          <svg viewBox="0 0 400 400" className="absolute inset-0 h-full w-full text-brand-200">
-            <circle cx="200" cy="200" r="120" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="5 8" />
-            <circle cx="200" cy="200" r="178" fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="3 9" />
-          </svg>
-          <div className="pop absolute left-1/2 top-1/2 -ml-[4.5rem] -mt-[4.5rem]" style={{ "--i": 0 }}>
-            <div className="grid h-36 w-36 place-items-center rounded-full bg-white shadow-modal ring-8 ring-brand-50">
-              <div className="text-center">
-                <QrCode size={52} className="mx-auto text-ink-900" />
-                <p className="mt-1 text-2xs font-semibold text-ink-500">Votre lien</p>
-              </div>
+    <section className="relative py-24">
+      <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 lg:grid-cols-2">
+        <div className="reveal">
+          <h2 className="font-landing text-[2.4rem] font-bold leading-[1.2] text-ink-900">
+            Vos clients sont sur<Spark className="-mt-6 ml-1" /><br />WhatsApp, votre<br />boutique aussi.
+          </h2>
+          <p className="mt-5 max-w-sm font-landing text-[1.05rem] leading-relaxed text-ink-500">Partagez votre lien dans vos statuts, sur TikTok ou Facebook, et recevez des commandes claires.</p>
+          <button onClick={onRegister} className="mt-9 rounded-full bg-ink-900 px-9 py-4 font-landing text-base font-medium text-white transition hover:-translate-y-0.5 hover:bg-ink-800">Obtenir mon lien</button>
+        </div>
+
+        <div className="reveal-group relative mx-auto aspect-[1.15] w-full max-w-lg" aria-hidden="true">
+          {/* Rectangle teinte derriere l'avatar central */}
+          <div className="pop absolute left-[22%] top-[20%] h-[62%] w-[60%] rounded-[1.75rem] bg-brand-50" style={{ "--i": 0 }} />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+            <div className="pop" style={{ "--i": 1 }}>
+              <img src={IMG("client-3")} alt="" className="h-32 w-32 rounded-full object-cover shadow-modal ring-[10px] ring-brand-100" />
             </div>
           </div>
-          {FACES.map(({ img, pos, delay }, i) => (
-            <div key={img} className={`absolute ${pos}`}>
-              <div className="pop" style={{ "--i": i + 1 }}>
-                <img src={IMG(img)} alt="" loading="lazy" className="h-16 w-16 animate-float rounded-full object-cover shadow-card-hover ring-4 ring-white" style={{ animationDelay: delay }} />
+          {PEOPLE.map(({ img, pos, ring, size }, i) => (
+            <div key={img + pos} className={`absolute ${pos}`}>
+              <div className="pop" style={{ "--i": i + 2 }}>
+                <img src={IMG(img)} alt="" className={`${size} animate-float rounded-full object-cover shadow-card-hover ring-[6px] ${ring}`} style={{ animationDelay: `${i * 0.6}s` }} />
               </div>
             </div>
           ))}
-          {BUBBLES.map(({ text, pos, i }) => (
+          {SOCIALS.map(({ icon: Icon, pos, color }, i) => (
+            <div key={pos} className={`absolute ${pos}`}>
+              <div className="pop" style={{ "--i": i + 6 }}>
+                <span className={`grid h-12 w-12 animate-float-slow place-items-center rounded-full bg-white shadow-card-hover ${color}`} style={{ animationDelay: `${i * 0.8}s` }}><Icon size={20} /></span>
+              </div>
+            </div>
+          ))}
+          {BUBBLES.map(({ text, pos }, i) => (
             <div key={text} className={`absolute ${pos}`}>
-              <div className="pop" style={{ "--i": i + 3 }}>
-                <span className="block animate-float-slow whitespace-nowrap rounded-2xl rounded-bl-sm bg-[#DCF8C6] px-3 py-2 text-xs font-medium text-ink-800 shadow-card-hover" style={{ animationDelay: `${i * 0.5}s` }}>{text}</span>
+              <div className="pop" style={{ "--i": i + 8 }}>
+                <span className="block whitespace-nowrap rounded-full rounded-bl-md bg-ink-900 px-3 py-1.5 font-landing text-xs font-semibold text-white shadow-card-hover">{text}</span>
               </div>
             </div>
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
 
-        <div className="reveal reveal-right order-2">
-          <Eyebrow>Partage</Eyebrow>
-          <h2 className="mt-4 font-display text-3xl font-bold leading-tight tracking-tight text-ink-900 sm:text-[2.6rem]">
-            Vos clients sont sur leur telephone. Votre boutique aussi.
-          </h2>
-          <p className="mt-4 max-w-md text-ink-500">
-            Mettez votre lien dans vos statuts WhatsApp, sur TikTok ou Facebook, et collez le QR code sur votre comptoir. Chaque message devient une commande claire.
-          </p>
-          <ul className="mt-6 space-y-2.5 text-sm text-ink-700">
-            {["Un lien court a votre nom", "Un QR code pret a imprimer", "Les commandes arrivent avec le bon produit et le bon prix"].map((t) => (
-              <li key={t} className="flex items-center gap-2.5"><BadgeCheck size={18} className="shrink-0 text-brand-500" /> {t}</li>
+/* ───── Carrousel (emplacement des temoignages de la maquette) ───── */
+// Exemples d'utilisation, pas des temoignages : remplacer par de vrais avis clients des qu'il y en a.
+const SHOWCASE = [
+  { img: "cas-maquis", name: "Maquis et restaurants", place: "Abidjan", text: "Le menu du jour en photos et les paiements Wave sans erreur de montant.", tags: ["Catalogue", "Wave"] },
+  { img: "cas-mode", name: "Couture et pagnes", place: "Bouake", text: "Chaque modele avec la taille et le tissu demandes au client.", tags: ["Champs", "WhatsApp"] },
+  { img: "cas-coiffure", name: "Coiffure et beaute", place: "Korhogo", text: "Vos prestations et vos prix affiches clairement, la cliente choisit son jour.", tags: ["Services"] },
+  { img: "cas-services", name: "Services et credit", place: "Daloa", text: "Un lien a partager, une commande claire, un paiement verifie.", tags: ["Lien", "Wave"] },
+  { img: "cas-patisserie", name: "Boulangerie", place: "Yamoussoukro", text: "Les commandes pour les fetes avec la date de retrait au meme endroit.", tags: ["Commandes"] },
+  { img: "cas-epicerie", name: "Epicerie et marche", place: "San-Pedro", text: "Le client paie a la livraison ou par Wave et suit sa commande.", tags: ["Livraison"] },
+];
+
+function LongArrow({ dir = 1 }) {
+  return (
+    <svg viewBox="0 0 48 16" className="h-4 w-12" aria-hidden="true" style={{ transform: dir < 0 ? "scaleX(-1)" : undefined }}>
+      <path d="M2 8 C 16 7, 30 9, 44 8 M36 2 C 40 5, 42 7, 45 8 C 42 9, 40 11, 36 14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" fill="none" />
+    </svg>
+  );
+}
+
+function Showcase() {
+  const viewportRef = useRef(null);
+  const [index, setIndex] = useState(0);
+  const [cardW, setCardW] = useState(0);
+  const [hover, setHover] = useState(false);
+  const visible = cardW ? Math.max(1, Math.round((viewportRef.current?.clientWidth || 0) / cardW)) : 3;
+  const maxIndex = Math.max(0, SHOWCASE.length - visible);
+
+  useEffect(() => {
+    function measure() {
+      const card = viewportRef.current?.querySelector("article");
+      if (card) setCardW(card.getBoundingClientRect().width + 32);
+    }
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  // Defilement automatique d'une carte toutes les 3,5 s (pause au survol)
+  useEffect(() => {
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (hover || reduced) return undefined;
+    const timer = setInterval(() => setIndex((i) => (i >= maxIndex ? 0 : i + 1)), 3500);
+    return () => clearInterval(timer);
+  }, [hover, maxIndex]);
+
+  return (
+    <section id="commerces" className="relative scroll-mt-24 pb-24">
+      {/* Ligne a main levee qui descend de la communaute vers ce titre */}
+      <svg viewBox="0 0 600 160" className="reveal-group pointer-events-none absolute -top-24 left-[30%] hidden w-[38rem] text-ink-300 lg:block" aria-hidden="true">
+        <path className="draw-path" pathLength="1" d="M560 4 C 560 60, 470 70, 440 50 C 412 30, 450 6, 470 30 C 500 70, 380 110, 300 100 C 200 88, 120 120, 40 150" stroke="currentColor" strokeWidth="1.4" fill="none" />
+        <path className="draw-path" pathLength="1" d="M52 138 L40 150 L56 152" stroke="currentColor" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      </svg>
+
+      <div className="mx-auto max-w-6xl px-5">
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div className="reveal relative">
+            <Sparkle className="absolute -left-8 -top-6" />
+            <h2 className="font-landing text-[2.4rem] font-bold leading-[1.2] text-ink-900">Un catalogue pour<br />chaque commerce.</h2>
+          </div>
+          <div className="reveal flex items-center gap-4 text-ink-700">
+            <button onClick={() => setIndex((i) => Math.max(0, i - 1))} disabled={index === 0} aria-label="Precedent" className="transition hover:text-brand-600 disabled:opacity-30"><LongArrow dir={-1} /></button>
+            <button onClick={() => setIndex((i) => (i >= maxIndex ? 0 : i + 1))} aria-label="Suivant" className="transition hover:text-brand-600"><LongArrow /></button>
+          </div>
+        </div>
+
+        <div ref={viewportRef} className="reveal mask-fade-x mt-12 overflow-hidden" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+          <div className="flex gap-8 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]" style={{ transform: `translateX(-${index * cardW}px)` }}>
+            {SHOWCASE.map(({ img, name, place, text, tags }) => (
+              <article key={name} className="w-full shrink-0 sm:w-[calc(50%-16px)] lg:w-[calc(33.333%-22px)]">
+                <span className="font-landing text-4xl font-bold leading-none text-brand-500" aria-hidden="true">&#8220;</span>
+                <p className="mt-2 min-h-[4.5rem] font-landing text-[1.05rem] leading-relaxed text-ink-800">{text}</p>
+                <div className="mt-5 border-t border-surface-border pt-5">
+                  <div className="flex items-center gap-3">
+                    <img src={IMG(img)} alt="" className="h-11 w-11 rounded-full object-cover" loading="lazy" />
+                    <div>
+                      <p className="font-landing text-sm font-bold text-ink-900">{name}</p>
+                      <p className="font-landing text-xs text-ink-400">{place}</p>
+                      <div className="mt-1 flex gap-1">
+                        {tags.map((t) => <span key={t} className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700">{t}</span>)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </article>
             ))}
-          </ul>
-          <button onClick={onRegister} className="group mt-8 inline-flex items-center gap-2 rounded-full bg-ink-900 px-7 py-3.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-ink-800">
-            Obtenir mon lien <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
-          </button>
+          </div>
         </div>
       </div>
     </section>
@@ -466,15 +578,14 @@ function Community({ onRegister }) {
 
 /* ───── FAQ ───── */
 const FAQS = [
-  { q: "CatalogueCI est-il gratuit ?", a: "Oui. Pendant le lancement, toutes les fonctionnalites sont gratuites, sans limite de produits ni de commandes. Vous serez prevenu a l'avance si des offres payantes arrivent." },
-  { q: "Comment mes clients me paient ?", a: "Par Wave (manuel ou automatique), a la livraison, ou en vous contactant sur WhatsApp. Vous choisissez les moyens que vous acceptez." },
-  { q: "Faut-il un site web ?", a: "Non. CatalogueCI cree la page de votre boutique. Il suffit de partager le lien ou le QR code." },
-  { q: "Comment je recois les commandes ?", a: "Elles arrivent dans votre tableau de bord avec les infos du client et du produit, et vous pouvez lui ecrire sur WhatsApp en un clic." },
-  { q: "Puis-je personnaliser ma boutique ?", a: "Oui : logo, banniere, couleurs, police et mise en page. Un apercu vous montre le resultat en direct." },
+  { q: "CatalogueCI est-il gratuit ?", a: "Oui. Pendant le lancement, tout est gratuit, sans limite de produits ni de commandes." },
+  { q: "Comment mes clients me paient ?", a: "Par Wave (manuel ou automatique), a la livraison, ou en vous contactant sur WhatsApp." },
+  { q: "Faut-il un site web ?", a: "Non. CatalogueCI cree la page de votre boutique : il suffit de partager le lien ou le QR code." },
+  { q: "Comment je recois les commandes ?", a: "Dans votre tableau de bord, avec les infos du client et du produit. Vous lui ecrivez sur WhatsApp en un clic." },
 ];
 
 function FAQ() {
-  const [open, setOpen] = useState(0);
+  const [open, setOpen] = useState(-1);
   const [email, setEmail] = useState("");
 
   function ask(e) {
@@ -485,94 +596,90 @@ function FAQ() {
   }
 
   return (
-    <section id="faq" className="scroll-mt-24 py-24">
-      <div className="mx-auto grid max-w-6xl gap-12 px-5 lg:grid-cols-[0.9fr_1.1fr]">
+    <section id="faq" className="relative scroll-mt-24 pb-28 pt-10">
+      <Swirl className="absolute left-0 top-6 hidden w-24 lg:block" d="M60 6 C 20 20, 40 50, 70 40 C 96 30, 70 4, 40 30 C 18 50, 30 80, 60 94" />
+      <div className="mx-auto grid max-w-6xl gap-14 px-5 lg:grid-cols-2">
         <div className="reveal">
-          <Eyebrow>Questions</Eyebrow>
-          <h2 className="mt-4 font-display text-3xl font-bold leading-tight tracking-tight text-ink-900 sm:text-[2.6rem]">Une question sur CatalogueCI&nbsp;?</h2>
-          <p className="mt-4 max-w-md text-ink-500">Les reponses aux questions qu'on nous pose le plus. Pour le reste, ecrivez-nous.</p>
-          <form onSubmit={ask} className="mt-8 flex max-w-md items-center gap-2 rounded-full border border-ink-200 bg-white p-1.5 pl-5 focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-100">
-            <Mail size={16} className="shrink-0 text-ink-400" />
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Votre email" aria-label="Votre email" className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-ink-400" />
-            <button type="submit" className="rounded-full bg-ink-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600">Ecrire</button>
+          <h2 className="font-landing text-[2.4rem] font-bold leading-[1.2] text-ink-900">Une question sur<Spark className="-mt-6 ml-1" /><br />CatalogueCI ?</h2>
+          <p className="mt-5 max-w-sm font-landing text-[1.05rem] leading-relaxed text-ink-500">Si vous avez une question, ecrivez-nous : nous repondons a toutes vos questions.</p>
+          <form onSubmit={ask} className="mt-9 flex max-w-sm items-center rounded-full border border-ink-400 bg-white p-1 pl-6">
+            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Votre email" aria-label="Votre email" className="min-w-0 flex-1 bg-transparent font-landing text-sm outline-none placeholder:text-ink-400" />
+            <button type="submit" className="rounded-full bg-ink-900 px-7 py-3 font-landing text-sm font-medium text-white transition hover:bg-brand-600">Envoyer</button>
           </form>
         </div>
 
-        <div className="reveal divide-y divide-surface-border rounded-3xl border border-surface-border bg-white px-6" style={{ "--i": 1 }}>
-          {FAQS.map(({ q, a }, i) => {
-            const isOpen = open === i;
-            return (
-              <div key={q}>
-                <button onClick={() => setOpen(isOpen ? -1 : i)} aria-expanded={isOpen} className="flex w-full items-center justify-between gap-4 py-5 text-left">
-                  <span className={`text-[0.95rem] font-semibold transition-colors ${isOpen ? "text-brand-700" : "text-ink-900"}`}>{q}</span>
-                  <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full transition-all duration-300 ${isOpen ? "rotate-45 bg-brand-500 text-white" : "bg-ink-100 text-ink-600"}`} aria-hidden="true">
-                    <span className="text-lg leading-none">+</span>
-                  </span>
-                </button>
-                <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
-                  <div className="overflow-hidden">
-                    <p className={`pb-5 pr-10 text-sm leading-relaxed text-ink-500 transition duration-500 ${isOpen ? "translate-y-0 opacity-100 delay-150" : "-translate-y-2 opacity-0"}`}>{a}</p>
+        <div>
+          <p className="reveal max-w-sm font-landing text-[1.05rem] leading-relaxed text-ink-800">Votre question a peut-etre deja une reponse, regardez ici.</p>
+          <ul className="mt-6">
+            {FAQS.map(({ q, a }, i) => {
+              const isOpen = open === i;
+              return (
+                <li key={q} className="reveal border-b border-surface-border" style={{ "--i": i + 1 }}>
+                  <button onClick={() => setOpen(isOpen ? -1 : i)} aria-expanded={isOpen} className="flex w-full items-center justify-between gap-4 py-5 text-left">
+                    <span className="font-landing text-[1.05rem] text-ink-900">{q}</span>
+                    <span className={`text-brand-500 transition-transform duration-300 ${isOpen ? "rotate-90" : ""}`}><LongArrow /></span>
+                  </button>
+                  <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+                    <div className="overflow-hidden">
+                      <p className={`pb-5 pr-10 font-landing text-[0.95rem] leading-relaxed text-ink-500 transition duration-500 ${isOpen ? "translate-y-0 opacity-100 delay-150" : "-translate-y-2 opacity-0"}`}>{a}</p>
+                    </div>
                   </div>
-                </div>
-              </div>
-            );
-          })}
+                </li>
+              );
+            })}
+          </ul>
         </div>
       </div>
     </section>
   );
 }
 
-/* ───── Appel final + pied de page ───── */
-function FinalCta({ onRegister }) {
-  return (
-    <section className="px-5 pb-24">
-      <div className="reveal relative mx-auto grid max-w-6xl overflow-hidden rounded-[2rem] bg-ink-900 text-white md:grid-cols-[1.2fr_1fr]">
-        <div className="relative z-10 p-8 sm:p-12">
-          <Eyebrow light>Lancement</Eyebrow>
-          <h2 className="mt-4 font-display text-3xl font-bold leading-tight sm:text-4xl">Ouvrez votre boutique en ligne aujourd'hui.</h2>
-          <p className="mt-4 max-w-md text-white/70">Gratuit pendant le lancement, sans engagement. Il vous faut juste un telephone et quelques photos de vos produits.</p>
-          <button onClick={onRegister} className="group mt-8 inline-flex items-center gap-2 rounded-full bg-brand-500 px-7 py-3.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-brand-600">
-            Creer ma boutique <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
-          </button>
-        </div>
-        <div className="relative min-h-[16rem]">
-          <img src={IMG("cas-mode")} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-ink-900 via-ink-900/20 to-transparent md:bg-gradient-to-r" />
-        </div>
-      </div>
-    </section>
-  );
-}
+/* ───── Pied de page plein (bleu dans la maquette -> orange) ───── */
+function Footer({ onLogin, onRegister }) {
+  const linkClass = "text-sm text-white/80 transition hover:text-white";
+  const columns = [
+    { title: "Plateforme", links: [["Accueil", "#accueil"], ["Atouts", "#atouts"], ["Commerces", "#commerces"], ["FAQ", "#faq"]] },
+    { title: "Ressources", links: [["Conditions d'utilisation", "/cgu"], ["Confidentialite", "/confidentialite"], ["Suivre une commande", "/suivi-commande"]] },
+    { title: "Compte", links: [["Connexion", onLogin], ["Inscription", onRegister], ["Mot de passe oublie", "/mot-de-passe-oublie"]] },
+  ];
 
-function Footer() {
   return (
-    <footer className="border-t border-surface-border bg-white">
-      <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="lg:col-span-2">
-          <div className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-500 text-white"><ShoppingBag size={18} /></span>
-            <span className="font-display text-lg font-bold text-ink-900">CatalogueCI</span>
+    <footer className="bg-brand-500 font-landing text-white">
+      <div className="mx-auto grid max-w-6xl gap-10 px-5 pb-10 pt-16 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr_1.1fr]">
+        <div className="reveal">
+          <Logo light />
+          <p className="mt-5 max-w-xs text-sm leading-relaxed text-white/85">Nous aidons chaque commercant a vendre plus simplement, en lui offrant tous les outils possibles.</p>
+        </div>
+        {columns.map(({ title, links }, i) => (
+          <div key={title} className="reveal" style={{ "--i": i + 1 }}>
+            <p className="mb-5 font-semibold">{title}</p>
+            <ul className="space-y-3">
+              {links.map(([label, target]) => (
+                <li key={label}>
+                  {typeof target === "function" ? (
+                    <button onClick={target} className={linkClass}>{label}</button>
+                  ) : target.startsWith("/") ? (
+                    <a href={target} onClick={goTo(target)} className={linkClass}>{label}</a>
+                  ) : (
+                    <a href={target} className={linkClass}>{label}</a>
+                  )}
+                </li>
+              ))}
+            </ul>
           </div>
-          <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-500">La boutique en ligne des commercants de Cote d'Ivoire : catalogue, QR code, WhatsApp et Wave.</p>
-        </div>
-        <div>
-          <p className="mb-4 text-sm font-semibold text-ink-900">Plateforme</p>
-          <ul className="space-y-2.5 text-sm text-ink-500">
-            {NAV_LINKS.map((link) => <li key={link.href}><a href={link.href} className="transition hover:text-ink-900">{link.label}</a></li>)}
-            <li><a href="/cgu" onClick={goTo("/cgu")} className="transition hover:text-ink-900">Conditions d'utilisation</a></li>
-            <li><a href="/confidentialite" onClick={goTo("/confidentialite")} className="transition hover:text-ink-900">Confidentialite</a></li>
-          </ul>
-        </div>
-        <div>
-          <p className="mb-4 text-sm font-semibold text-ink-900">Contact</p>
-          <ul className="space-y-2.5 text-sm text-ink-500">
-            <li className="flex items-center gap-2"><MapPin size={15} /> Abidjan, Cote d'Ivoire</li>
-            <li><a href={`mailto:${SUPPORT_EMAIL}`} className="flex items-center gap-2 transition hover:text-ink-900"><Mail size={15} /> {SUPPORT_EMAIL}</a></li>
-          </ul>
+        ))}
+        <div className="reveal" style={{ "--i": 4 }}>
+          <p className="mb-5 font-semibold">Contact</p>
+          <a href={`mailto:${SUPPORT_EMAIL}`} className={linkClass}>{SUPPORT_EMAIL}</a>
+          <p className="mt-2 flex items-center gap-1.5 text-sm text-white/80"><MapPin size={14} /> Abidjan</p>
+          <div className="mt-4 flex gap-2.5">
+            <a href={`mailto:${SUPPORT_EMAIL}`} aria-label="Nous ecrire" className="grid h-9 w-9 place-items-center rounded-full bg-white text-brand-600 transition hover:scale-110"><Mail size={16} /></a>
+          </div>
         </div>
       </div>
-      <p className="border-t border-surface-border py-6 text-center text-xs text-ink-400">&copy; {new Date().getFullYear()} CatalogueCI. Tous droits reserves.</p>
+      <div className="mx-auto max-w-6xl px-5">
+        <p className="border-t border-white/25 py-6 text-center text-sm text-white/85">Copyright © {new Date().getFullYear()} CatalogueCI. Tous droits reserves.</p>
+      </div>
     </footer>
   );
 }
@@ -581,20 +688,18 @@ function Footer() {
 export default function LandingPage({ onLogin, onRegister }) {
   const rootRef = useReveal();
   return (
-    <div ref={rootRef} className="min-h-screen overflow-x-hidden bg-surface">
+    <div ref={rootRef} className="min-h-screen overflow-x-hidden bg-gradient-to-b from-[#FFF8F3] via-white to-[#FBFAF8] font-landing">
       <Navbar onLogin={onLogin} onRegister={onRegister} />
       <main>
         <Hero onRegister={onRegister} />
-        <Marquee />
-        <FactsBand />
-        <HowItWorks Eyebrow={Eyebrow} />
-        <UseCases />
-        <MapSection />
+        <StatsBand />
+        <Features />
+        <MapSearch />
         <Community onRegister={onRegister} />
+        <Showcase />
         <FAQ />
-        <FinalCta onRegister={onRegister} />
       </main>
-      <Footer />
+      <Footer onLogin={onLogin} onRegister={onRegister} />
     </div>
   );
 }

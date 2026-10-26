@@ -24,3 +24,8 @@ attribution non obligatoire). Recadrées et converties en WebP depuis `images.un
 Page d'une photo : `https://unsplash.com/photos/<identifiant>` (rechercher l'identifiant sur unsplash.com).
 Les personnes photographiées ne sont pas des utilisateurs de CatalogueCI : ces images illustrent des types de commerces.
 Remplacez-les par vos propres photos (même nom de fichier) dès que possible.
+
+## Icônes et visuel de l'en-tête
+
+- icone-catalogue.webp, icone-whatsapp.webp, icone-paiement.webp : **Fluent Emoji** (Microsoft, licence MIT).
+- main-telephone.webp : photo libre détourée (fond transparent, noir et blanc) pour l'en-tête.

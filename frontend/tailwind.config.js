@@ -61,6 +61,8 @@ export default {
       fontFamily: {
         sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
         display: ["Poppins", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        // Landing : geometrique, proche de la maquette (Century Gothic)
+        landing: ["Jost", "Poppins", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       borderRadius: {
         xl: "0.875rem",
