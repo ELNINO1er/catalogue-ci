@@ -11,7 +11,7 @@ import { useCountUp, useInView, useReveal } from "./useLandingMotion";
 
 // Reproduction de la maquette video (Campy) aux couleurs CatalogueCI :
 // bleu de la maquette -> orange (brand), noir-bleu -> encre (ink).
-const SUPPORT_EMAIL = "support@catalogueci.com";
+const SUPPORT_EMAIL = "contact@mhtechconsulting.com";
 const IMG = (name) => `/landing/${name}.webp`;
 
 function goTo(path) {

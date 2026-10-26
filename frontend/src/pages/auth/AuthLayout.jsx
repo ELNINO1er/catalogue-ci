@@ -139,9 +139,9 @@ function AuthVisual({ variant, shopName }) {
             <FloatCard className="left-[7%] bottom-[30%]" delay="900ms">
               <p className="text-[0.7rem] font-medium uppercase tracking-wider text-ink-400">Votre lien</p>
               {/* Apercu indicatif : le lien definitif est genere par le serveur */}
-              <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-400">
-                <Link2 size={15} className="text-brand-500" />
-                catalogueci.com/catalogue/
+              <p className="mt-1 flex max-w-[16rem] items-center gap-1.5 text-sm text-ink-400">
+                <Link2 size={15} className="shrink-0 text-brand-500" />
+                <span className="truncate">{window.location.host}/catalogue/</span>
               </p>
               <p className="max-w-[14rem] truncate pl-[1.3rem] text-sm font-semibold text-brand-600">{slugPreview(shopName || "")}</p>
             </FloatCard>
