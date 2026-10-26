@@ -1,0 +1,15 @@
+{
+  "name": "catalogue-ci",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CatalogueCI : point d'entree pour l'hebergeur (Hostinger). Le frontend est deja compile dans backend/public.",
+  "main": "backend/src/server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "postinstall": "npm --prefix backend install --omit=dev",
+    "build": "node -e \"console.log('Frontend deja compile dans backend/public')\"",
+    "start": "node backend/src/server.js"
+  }
+}

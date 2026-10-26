@@ -1,4 +1,5 @@
-require("dotenv").config();
+// .env du dossier backend, quel que soit le dossier de lancement (racine sur Hostinger)
+require("dotenv").config({ path: require("path").join(__dirname, "../.env") });
 
 if (!process.env.JWT_SECRET) {
   console.error("Configuration invalide : JWT_SECRET est obligatoire.");
