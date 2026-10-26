@@ -4,18 +4,33 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Couleur principale (orange) : boutons, menu actif, liens, graphiques.
         brand: {
-          50: "#EEEEFB",
-          100: "#D6D7F5",
-          200: "#AAAFE9",
-          300: "#7E86DE",
-          400: "#4F58C9",
-          500: "#272C68",
-          600: "#1E245E",
-          700: "#111B4D",
-          800: "#0C1338",
-          900: "#070B24",
-          950: "#040718",
+          50: "#FFF4EC",
+          100: "#FFE4D1",
+          200: "#FFC9A3",
+          300: "#FFA86B",
+          400: "#FF8A3D",
+          500: "#F76707",
+          600: "#E8590C",
+          700: "#C2410C",
+          800: "#9A3412",
+          900: "#7C2D12",
+          950: "#431407",
+        },
+        // Encre : titres, textes et fonds sombres (gris bleute neutre).
+        ink: {
+          50: "#F9FAFB",
+          100: "#F3F4F6",
+          200: "#E5E7EB",
+          300: "#D1D5DB",
+          400: "#9CA3AF",
+          500: "#6B7280",
+          600: "#4B5563",
+          700: "#374151",
+          800: "#1F2937",
+          900: "#111827",
+          950: "#030712",
         },
         accent: {
           50: "#FFFDF0",
@@ -38,9 +53,9 @@ export default {
           light: "#E8FBF0",
         },
         surface: {
-          DEFAULT: "#F8F9FC",
+          DEFAULT: "#F7F6F3",
           card: "#FFFFFF",
-          border: "#E5E7EB",
+          border: "#ECEAE6",
         },
       },
       fontFamily: {
@@ -53,8 +68,8 @@ export default {
         "3xl": "1.25rem",
       },
       boxShadow: {
-        card: "0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)",
-        "card-hover": "0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04)",
+        card: "0 1px 2px rgba(17,24,39,0.04), 0 1px 3px rgba(17,24,39,0.04)",
+        "card-hover": "0 6px 16px rgba(17,24,39,0.07), 0 2px 4px rgba(17,24,39,0.04)",
         modal: "0 20px 60px rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.1)",
         sidebar: "2px 0 8px rgba(0,0,0,0.06)",
       },

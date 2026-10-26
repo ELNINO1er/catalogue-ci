@@ -1,6 +1,6 @@
 // Fetch-based API client (replaces axios for Hostinger CDN compatibility)
 
-function resolveApiBaseUrl() {
+export function resolveApiBaseUrl() {
   if (import.meta.env.MODE === "lan") {
     return `http://${window.location.hostname}:4000/api`;
   }
@@ -8,6 +8,9 @@ function resolveApiBaseUrl() {
 }
 
 const BASE_URL = resolveApiBaseUrl();
+
+// Emis quand la session n'est plus valide (token expire, compte desactive, boutique suspendue).
+export const UNAUTHORIZED_EVENT = "catalogueci:unauthorized";
 
 function getToken() {
   return localStorage.getItem("catalogueci_token");
@@ -56,13 +59,15 @@ async function request(method, url, body, options = {}) {
     body: isFormData ? body : body ? JSON.stringify(body) : undefined,
   });
 
-  // Handle 401 — clear auth
-  if (res.status === 401) {
+  const data = await res.json().catch(() => ({}));
+
+  // Session invalide : on vide le stockage et on previent l'application (retour a la connexion).
+  // Seulement si un token etait envoye, pour ne pas interferer avec un echec de connexion.
+  if (token && (res.status === 401 || data.code === "BUSINESS_SUSPENDED")) {
     localStorage.removeItem("catalogueci_token");
     localStorage.removeItem("catalogueci_user");
+    window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT, { detail: { message: data.message } }));
   }
-
-  const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
     const error = new Error(data.message || `HTTP ${res.status}`);

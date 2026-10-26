@@ -19,6 +19,11 @@ export async function uploadProductImage(businessId, file) {
   return data.image_url;
 }
 
+export async function updateProduct(productId, payload) {
+  const { data } = await api.put(`/products/${productId}`, payload);
+  return data;
+}
+
 export async function deleteProduct(productId) {
   const { data } = await api.delete(`/products/${productId}`);
   return data;

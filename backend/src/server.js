@@ -52,6 +52,8 @@ if (process.env.NODE_ENV === "production") {
   app.use(cors({
     origin(origin, callback) {
       if (!origin || devOrigins.has(origin)) return callback(null, true);
+      // Vite change de port (5174, 5175...) si 5173 est deja pris
+      if (/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) return callback(null, true);
       // Allow LAN IPs for mobile testing
       if (/^http:\/\/(192\.168|10\.|172\.(1[6-9]|2\d|3[0-1]))\.\d{1,3}\.\d{1,3}:\d+$/.test(origin)) return callback(null, true);
       return callback(new Error(`Origin CORS non autorisee: ${origin}`));
@@ -99,8 +101,9 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 4000;
 
-async function ensureBusinessColumns() {
-  const columns = [
+// Colonnes ajoutees apres la creation initiale des tables (sync() ne modifie pas une table existante).
+const EXTRA_COLUMNS = {
+  businesses: [
     { name: "banner_url", sql: "VARCHAR(500) NULL AFTER `logo_url`" },
     { name: "template_id", sql: "INT NULL AFTER `category_id`" },
     { name: "email", sql: "VARCHAR(180) NULL AFTER `phone_number`" },
@@ -120,36 +123,14 @@ async function ensureBusinessColumns() {
     { name: "commune", sql: "VARCHAR(100) NULL AFTER `city`" },
     { name: "onboarding_completed", sql: "TINYINT(1) NOT NULL DEFAULT 0 AFTER `commune`" },
     { name: "onboarding_step", sql: "INT NOT NULL DEFAULT 0 AFTER `onboarding_completed`" },
-  ];
-
-  for (const column of columns) {
-    const [existing] = await sequelize.query(`SHOW COLUMNS FROM \`businesses\` LIKE '${column.name}'`);
-    if (!existing.length) {
-      await sequelize.query(`ALTER TABLE \`businesses\` ADD COLUMN \`${column.name}\` ${column.sql}`);
-      console.log(`Colonne businesses.${column.name} ajoutee.`);
-    }
-  }
-}
-
-async function ensurePaymentSettingsColumns() {
-  const columns = [
+  ],
+  merchant_payment_settings: [
     { name: "wave_account_name", sql: "VARCHAR(120) NULL AFTER `wave_phone_number`" },
     { name: "payment_instructions", sql: "TEXT NULL AFTER `wave_account_name`" },
     { name: "is_wave_checkout_enabled", sql: "TINYINT(1) NOT NULL DEFAULT 0 AFTER `payment_mode`" },
     { name: "is_cod_enabled", sql: "TINYINT(1) NOT NULL DEFAULT 0 AFTER `is_wave_enabled`" },
-  ];
-
-  for (const column of columns) {
-    const [existing] = await sequelize.query(`SHOW COLUMNS FROM \`merchant_payment_settings\` LIKE '${column.name}'`);
-    if (!existing.length) {
-      await sequelize.query(`ALTER TABLE \`merchant_payment_settings\` ADD COLUMN \`${column.name}\` ${column.sql}`);
-      console.log(`Colonne merchant_payment_settings.${column.name} ajoutee.`);
-    }
-  }
-}
-
-async function ensureOrderColumns() {
-  const columns = [
+  ],
+  orders: [
     { name: "wave_checkout_session_id", sql: "VARCHAR(120) NULL AFTER `payment_method`" },
     { name: "wave_launch_url", sql: "VARCHAR(500) NULL AFTER `wave_checkout_session_id`" },
     { name: "wave_transaction_id", sql: "VARCHAR(120) NULL AFTER `wave_launch_url`" },
@@ -158,13 +139,20 @@ async function ensureOrderColumns() {
     { name: "payment_proof_sender", sql: "VARCHAR(120) NULL AFTER `payment_proof_reference`" },
     { name: "payment_proof_note", sql: "TEXT NULL AFTER `payment_proof_sender`" },
     { name: "payment_proof_image", sql: "VARCHAR(500) NULL AFTER `payment_proof_note`" },
-  ];
+  ],
+  platform_payments: [
+    { name: "plan_id", sql: "INT NULL AFTER `subscription_id`" },
+  ],
+};
 
-  for (const column of columns) {
-    const [existing] = await sequelize.query(`SHOW COLUMNS FROM \`orders\` LIKE '${column.name}'`);
-    if (!existing.length) {
-      await sequelize.query(`ALTER TABLE \`orders\` ADD COLUMN \`${column.name}\` ${column.sql}`);
-      console.log(`Colonne orders.${column.name} ajoutee.`);
+async function ensureExtraColumns() {
+  for (const [table, columns] of Object.entries(EXTRA_COLUMNS)) {
+    for (const column of columns) {
+      const [existing] = await sequelize.query(`SHOW COLUMNS FROM \`${table}\` LIKE '${column.name}'`);
+      if (!existing.length) {
+        await sequelize.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column.name}\` ${column.sql}`);
+        console.log(`Colonne ${table}.${column.name} ajoutee.`);
+      }
     }
   }
 }
@@ -174,9 +162,7 @@ async function ensureOrderColumns() {
     await sequelize.authenticate();
     console.log("Connexion MySQL reussie.");
     await sequelize.sync(process.env.DB_SYNC_ALTER === "true" ? { alter: true } : {});
-    await ensureBusinessColumns();
-    await ensurePaymentSettingsColumns();
-    await ensureOrderColumns();
+    await ensureExtraColumns();
     console.log("Modeles synchronises.");
     const server = app.listen(PORT, () => console.log(`API sur http://localhost:${PORT}`));
     server.on("error", (err) => {

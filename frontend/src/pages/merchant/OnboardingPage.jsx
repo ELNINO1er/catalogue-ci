@@ -111,8 +111,13 @@ export default function OnboardingPage({ user, setView }) {
         setCategories(d.categories || []);
         setTemplates(d.templates || []);
         setExistingProducts(d.products || []);
-        if (d.completed) setPublished(true);
-        if (d.currentStep > 0 && d.currentStep < 10) setStep(Math.min(d.currentStep + 1, 10));
+        if (d.completed) {
+          setPublished(true);
+          setStep(10);
+        } else if (d.currentStep > 0) {
+          // Reprise : etape suivante, au plus l'etape 9 (apercu + bouton Publier).
+          setStep(Math.min(d.currentStep + 1, 9));
+        }
       })
       .catch(() => toast.error("Erreur de chargement."))
       .finally(() => setLoading(false));
@@ -160,7 +165,8 @@ export default function OnboardingPage({ user, setView }) {
   }
 
   async function handleSaveLater() {
-    await saveCurrentStep();
+    const ok = step >= 2 && step <= 7 ? await saveCurrentStep() : true;
+    if (!ok) return;
     toast.success("Progres sauvegarde !");
     setView("dashboard");
   }
@@ -211,7 +217,7 @@ export default function OnboardingPage({ user, setView }) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShoppingBag size={18} className="text-brand-500" />
-              <span className="font-display text-sm font-bold text-brand-700">CatalogueCI</span>
+              <span className="font-display text-sm font-bold text-ink-700">CatalogueCI</span>
             </div>
             <span className="text-sm font-medium text-gray-500">Etape {step} sur 10</span>
           </div>
@@ -247,13 +253,13 @@ export default function OnboardingPage({ user, setView }) {
             <div className="mx-auto mb-6 grid h-20 w-20 place-items-center rounded-3xl bg-brand-50">
               <Sparkles size={36} className="text-brand-500" />
             </div>
-            <h1 className="font-display text-3xl font-bold text-brand-800">Bienvenue{user?.name ? `, ${user.name.split(" ")[0]}` : ""} !</h1>
+            <h1 className="font-display text-3xl font-bold text-ink-800">Bienvenue{user?.name ? `, ${user.name.split(" ")[0]}` : ""} !</h1>
             <p className="mx-auto mt-4 max-w-lg text-gray-500">
               Nous allons creer votre boutique digitale en quelques etapes simples. Vous pourrez modifier chaque detail plus tard.
             </p>
             <div className="mx-auto mt-6 flex max-w-sm flex-wrap justify-center gap-4 text-sm text-gray-500">
               <span className="flex items-center gap-1.5"><Clock size={14} className="text-brand-400" /> 5-10 minutes</span>
-              <span className="flex items-center gap-1.5"><Save size={14} className="text-brand-400" /> Sauvegarde auto</span>
+              <span className="flex items-center gap-1.5"><Save size={14} className="text-brand-400" /> Sauvegarde a chaque etape</span>
               <span className="flex items-center gap-1.5"><Eye size={14} className="text-brand-400" /> Apercu en direct</span>
             </div>
             <Button size="xl" className="mt-8" onClick={goNext}>Commencer <ArrowRight size={18} /></Button>
@@ -264,12 +270,12 @@ export default function OnboardingPage({ user, setView }) {
         {step === 2 && (
           <div className="card animate-fade-in space-y-6 p-6">
             <div>
-              <h2 className="font-display text-xl font-bold text-brand-800">Informations de votre boutique</h2>
+              <h2 className="font-display text-xl font-bold text-ink-800">Informations de votre boutique</h2>
               <p className="text-sm text-gray-500">Les informations de base de votre commerce.</p>
             </div>
             <Input label="Nom de la boutique *" value={biz.name || ""} onChange={(e) => updateBiz("name", e.target.value)} placeholder="Ex: Chez Awa Food" />
             <div className="grid gap-1.5">
-              <span className="text-sm font-semibold text-brand-700">Description</span>
+              <span className="text-sm font-semibold text-ink-700">Description</span>
               <textarea value={biz.description || ""} onChange={(e) => updateBiz("description", e.target.value)} rows={3} className="input-base resize-none" placeholder="Decrivez votre boutique en quelques mots..." />
             </div>
             <Select label="Categorie" value={biz.category_id || ""} onChange={(e) => updateBiz("category_id", e.target.value)}>
@@ -302,7 +308,7 @@ export default function OnboardingPage({ user, setView }) {
         {step === 3 && (
           <div className="card animate-fade-in space-y-6 p-6">
             <div>
-              <h2 className="font-display text-xl font-bold text-brand-800">Type d'activite</h2>
+              <h2 className="font-display text-xl font-bold text-ink-800">Type d'activite</h2>
               <p className="text-sm text-gray-500">Quel type de boutique voulez-vous creer ?</p>
             </div>
             <div className="grid gap-3">
@@ -318,7 +324,7 @@ export default function OnboardingPage({ user, setView }) {
                     <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${selected ? "bg-brand-500 text-white" : "bg-surface text-gray-400"}`}>
                       <Icon size={20} />
                     </div>
-                    <span className={`font-medium ${selected ? "text-brand-800" : "text-gray-600"}`}>{t.label}</span>
+                    <span className={`font-medium ${selected ? "text-ink-800" : "text-gray-600"}`}>{t.label}</span>
                     {selected ? <Check size={18} className="ml-auto text-brand-500" /> : null}
                   </button>
                 );
@@ -331,7 +337,7 @@ export default function OnboardingPage({ user, setView }) {
         {step === 4 && (
           <div className="card animate-fade-in space-y-6 p-6">
             <div>
-              <h2 className="font-display text-xl font-bold text-brand-800">Contact et localisation</h2>
+              <h2 className="font-display text-xl font-bold text-ink-800">Contact et localisation</h2>
               <p className="text-sm text-gray-500">Comment vos clients vous contactent.</p>
             </div>
             <Input label="Numero WhatsApp *" value={biz.whatsapp_number || ""} onChange={(e) => updateBiz("whatsapp_number", e.target.value)} placeholder="225XXXXXXXXXX" inputMode="tel" />
@@ -347,7 +353,7 @@ export default function OnboardingPage({ user, setView }) {
         {step === 5 && (
           <div className="card animate-fade-in space-y-6 p-6">
             <div>
-              <h2 className="font-display text-xl font-bold text-brand-800">Moyens de paiement</h2>
+              <h2 className="font-display text-xl font-bold text-ink-800">Moyens de paiement</h2>
               <p className="text-sm text-gray-500">Comment vos clients vous paient.</p>
             </div>
             <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
@@ -364,7 +370,7 @@ export default function OnboardingPage({ user, setView }) {
                   <Icon size={20} />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-brand-800">{label}</p>
+                  <p className="font-medium text-ink-800">{label}</p>
                   <p className="text-xs text-gray-500">{desc}</p>
                 </div>
                 <input type="checkbox" checked={!!payment[key]} onChange={(e) => updatePayment(key, e.target.checked)} className="h-5 w-5 accent-brand-500" />
@@ -377,7 +383,7 @@ export default function OnboardingPage({ user, setView }) {
               </div>
             ) : null}
             <div className="grid gap-1.5">
-              <span className="text-sm font-semibold text-brand-700">Instructions de paiement (optionnel)</span>
+              <span className="text-sm font-semibold text-ink-700">Instructions de paiement (optionnel)</span>
               <textarea value={payment.payment_instructions || ""} onChange={(e) => updatePayment("payment_instructions", e.target.value)} rows={2} className="input-base resize-none" placeholder="Ex: Envoyez le montant exact et mentionnez votre nom..." />
             </div>
           </div>
@@ -388,17 +394,17 @@ export default function OnboardingPage({ user, setView }) {
           <div className="animate-fade-in space-y-6">
             <div className="card space-y-6 p-6">
               <div>
-                <h2 className="font-display text-xl font-bold text-brand-800">Design de votre boutique</h2>
+                <h2 className="font-display text-xl font-bold text-ink-800">Design de votre boutique</h2>
                 <p className="text-sm text-gray-500">Choisissez les couleurs, la police et le style.</p>
               </div>
 
               {/* Color pickers */}
               <div>
-                <span className="text-sm font-semibold text-brand-700">Couleur principale</span>
+                <span className="text-sm font-semibold text-ink-700">Couleur principale</span>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {COLOR_PRESETS.map((c) => (
                     <button key={c.value} onClick={() => updateBiz("primary_color", c.value)} title={c.name}
-                      className={`h-10 w-10 rounded-xl border-2 transition ${biz.primary_color === c.value ? "border-brand-800 ring-2 ring-brand-200" : "border-transparent"}`}
+                      className={`h-10 w-10 rounded-xl border-2 transition ${biz.primary_color === c.value ? "border-ink-800 ring-2 ring-brand-200" : "border-transparent"}`}
                       style={{ backgroundColor: c.value }} />
                   ))}
                   <input type="color" value={biz.primary_color || "#272C68"} onChange={(e) => updateBiz("primary_color", e.target.value)} className="h-10 w-10 cursor-pointer rounded-xl border-0" />
@@ -406,11 +412,11 @@ export default function OnboardingPage({ user, setView }) {
               </div>
 
               <div>
-                <span className="text-sm font-semibold text-brand-700">Couleur des boutons</span>
+                <span className="text-sm font-semibold text-ink-700">Couleur des boutons</span>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {COLOR_PRESETS.map((c) => (
                     <button key={c.value} onClick={() => updateBiz("button_color", c.value)} title={c.name}
-                      className={`h-10 w-10 rounded-xl border-2 transition ${biz.button_color === c.value ? "border-brand-800 ring-2 ring-brand-200" : "border-transparent"}`}
+                      className={`h-10 w-10 rounded-xl border-2 transition ${biz.button_color === c.value ? "border-ink-800 ring-2 ring-brand-200" : "border-transparent"}`}
                       style={{ backgroundColor: c.value }} />
                   ))}
                   <input type="color" value={biz.button_color || "#272C68"} onChange={(e) => updateBiz("button_color", e.target.value)} className="h-10 w-10 cursor-pointer rounded-xl border-0" />
@@ -419,13 +425,13 @@ export default function OnboardingPage({ user, setView }) {
 
               {/* Font */}
               <div>
-                <span className="text-sm font-semibold text-brand-700">Police d'ecriture</span>
+                <span className="text-sm font-semibold text-ink-700">Police d'ecriture</span>
                 <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {FONTS.map((f) => (
                     <button key={f} onClick={() => updateBiz("font_family", f)}
                       className={`rounded-xl border-2 px-3 py-3 text-center transition ${biz.font_family === f ? "border-brand-500 bg-brand-50" : "border-surface-border"}`}
                       style={{ fontFamily: f }}>
-                      <span className="text-lg font-semibold text-brand-800">{f}</span>
+                      <span className="text-lg font-semibold text-ink-800">{f}</span>
                     </button>
                   ))}
                 </div>
@@ -437,7 +443,7 @@ export default function OnboardingPage({ user, setView }) {
                   <button key={mode} onClick={() => updateBiz("theme_mode", mode)}
                     className={`rounded-xl border-2 px-4 py-4 text-center transition ${biz.theme_mode === mode ? "border-brand-500 bg-brand-50" : "border-surface-border"}`}>
                     <div className={`mx-auto mb-2 h-8 w-16 rounded-lg ${mode === "dark" ? "bg-gray-900" : "bg-white border border-gray-200"}`} />
-                    <span className="text-sm font-medium text-brand-800">{mode === "light" ? "Clair" : "Sombre"}</span>
+                    <span className="text-sm font-medium text-ink-800">{mode === "light" ? "Clair" : "Sombre"}</span>
                   </button>
                 ))}
               </div>
@@ -447,7 +453,7 @@ export default function OnboardingPage({ user, setView }) {
                 {["grid", "list"].map((ds) => (
                   <button key={ds} onClick={() => updateBiz("display_style", ds)}
                     className={`rounded-xl border-2 px-4 py-4 text-center transition ${biz.display_style === ds ? "border-brand-500 bg-brand-50" : "border-surface-border"}`}>
-                    <span className="text-sm font-medium text-brand-800">{ds === "grid" ? "Grille" : "Liste"}</span>
+                    <span className="text-sm font-medium text-ink-800">{ds === "grid" ? "Grille" : "Liste"}</span>
                   </button>
                 ))}
               </div>
@@ -455,12 +461,12 @@ export default function OnboardingPage({ user, setView }) {
               {/* Template */}
               {templates.length ? (
                 <div>
-                  <span className="text-sm font-semibold text-brand-700">Template</span>
+                  <span className="text-sm font-semibold text-ink-700">Template</span>
                   <div className="mt-2 grid gap-3 sm:grid-cols-2">
                     {templates.map((t) => (
                       <button key={t.id} onClick={() => updateBiz("template_id", t.id)}
                         className={`rounded-xl border-2 p-4 text-left transition ${biz.template_id === t.id ? "border-brand-500 bg-brand-50" : "border-surface-border"}`}>
-                        <p className="font-semibold text-brand-800">{t.name}</p>
+                        <p className="font-semibold text-ink-800">{t.name}</p>
                         {t.description ? <p className="mt-1 text-xs text-gray-500">{t.description}</p> : null}
                         {t.is_premium ? <Badge variant="warning" className="mt-2">Premium</Badge> : null}
                       </button>
@@ -473,12 +479,12 @@ export default function OnboardingPage({ user, setView }) {
             {/* Live Preview */}
             <div className="card overflow-hidden">
               <div className="border-b border-surface-border px-4 py-3">
-                <p className="text-sm font-semibold text-brand-700"><Eye size={14} className="mr-1.5 inline" /> Apercu en direct</p>
+                <p className="text-sm font-semibold text-ink-700"><Eye size={14} className="mr-1.5 inline" /> Apercu en direct</p>
               </div>
               <div className="p-4" style={{ backgroundColor: biz.background_color || "#F8F9FC", fontFamily: biz.font_family || "Inter" }}>
                 <div className="rounded-xl p-5 text-white" style={{ backgroundColor: primaryColor }}>
                   <div className="flex items-center gap-3">
-                    {biz.logo_url ? <img src={biz.logo_url} alt="" className="h-10 w-10 rounded-xl bg-white object-cover" /> : <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/20"><Store size={18} /></div>}
+                    {biz.logo_url ? <img src={mediaUrl(biz.logo_url)} alt="" className="h-10 w-10 rounded-xl bg-white object-cover" /> : <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/20"><Store size={18} /></div>}
                     <div>
                       <p className="text-xs text-white/60">{categories.find((c) => c.id === Number(biz.category_id))?.name || "Commerce"}</p>
                       <p className="font-bold">{biz.name || "Nom de votre boutique"}</p>
@@ -499,12 +505,12 @@ export default function OnboardingPage({ user, setView }) {
         {step === 7 && (
           <div className="card animate-fade-in space-y-6 p-6">
             <div>
-              <h2 className="font-display text-xl font-bold text-brand-800">Messages automatiques</h2>
+              <h2 className="font-display text-xl font-bold text-ink-800">Messages automatiques</h2>
               <p className="text-sm text-gray-500">Personnalisez les messages envoyes a vos clients. Utilisez les variables : {"{customer_name}"}, {"{product_name}"}, {"{business_name}"}, {"{price}"}, {"{order_number}"}</p>
             </div>
             {messages.map((m, i) => (
               <div key={m.type} className="space-y-2 rounded-xl border border-surface-border p-4">
-                <p className="text-sm font-semibold text-brand-800">{m.title}</p>
+                <p className="text-sm font-semibold text-ink-800">{m.title}</p>
                 <textarea
                   value={m.content}
                   onChange={(e) => {
@@ -516,7 +522,7 @@ export default function OnboardingPage({ user, setView }) {
                   className="input-base resize-none text-sm"
                 />
                 <div className="rounded-lg bg-surface p-3 text-xs text-gray-500">
-                  <p className="font-semibold text-brand-700">Apercu :</p>
+                  <p className="font-semibold text-ink-700">Apercu :</p>
                   <p className="mt-1">{m.content.replace(/\{customer_name\}/g, "Awa").replace(/\{business_name\}/g, biz.name || "Ma boutique").replace(/\{product_name\}/g, "Poulet braise").replace(/\{price\}/g, "3 500").replace(/\{order_number\}/g, "42")}</p>
                 </div>
               </div>
@@ -528,7 +534,7 @@ export default function OnboardingPage({ user, setView }) {
         {step === 8 && (
           <div className="card animate-fade-in space-y-6 p-6">
             <div>
-              <h2 className="font-display text-xl font-bold text-brand-800">Premiers produits</h2>
+              <h2 className="font-display text-xl font-bold text-ink-800">Premiers produits</h2>
               <p className="text-sm text-gray-500">Ajoutez vos premiers produits ou services (vous pourrez en ajouter plus tard).</p>
             </div>
 
@@ -582,7 +588,7 @@ export default function OnboardingPage({ user, setView }) {
         {step === 9 && (
           <div className="animate-fade-in space-y-6">
             <div className="card p-6">
-              <h2 className="font-display text-xl font-bold text-brand-800">Apercu de votre boutique</h2>
+              <h2 className="font-display text-xl font-bold text-ink-800">Apercu de votre boutique</h2>
               <p className="text-sm text-gray-500">Voici a quoi ressemblera votre boutique pour vos clients.</p>
             </div>
 
@@ -592,7 +598,7 @@ export default function OnboardingPage({ user, setView }) {
               <div className="relative p-6 text-white" style={{ backgroundColor: primaryColor }}>
                 {biz.banner_url ? <div className="absolute inset-0"><img src={biz.banner_url} alt="" className="h-full w-full object-cover opacity-30" /><div className="absolute inset-0" style={{ backgroundColor: `${primaryColor}cc` }} /></div> : null}
                 <div className="relative flex items-center gap-4">
-                  {biz.logo_url ? <img src={biz.logo_url} alt="" className="h-14 w-14 rounded-2xl border-2 border-white/30 bg-white object-cover" /> : <div className="grid h-14 w-14 place-items-center rounded-2xl bg-white/20"><Store size={24} /></div>}
+                  {biz.logo_url ? <img src={mediaUrl(biz.logo_url)} alt="" className="h-14 w-14 rounded-2xl border-2 border-white/30 bg-white object-cover" /> : <div className="grid h-14 w-14 place-items-center rounded-2xl bg-white/20"><Store size={24} /></div>}
                   <div>
                     <p className="text-sm text-white/60">{categories.find((c) => c.id === Number(biz.category_id))?.name || ""}</p>
                     <p className="text-xl font-bold">{biz.name || "Ma boutique"}</p>
@@ -638,7 +644,7 @@ export default function OnboardingPage({ user, setView }) {
             <div className="card flex items-center gap-6 p-6">
               <QRCodeCanvas value={publicUrl} size={120} level="H" />
               <div>
-                <p className="font-semibold text-brand-800">QR Code de votre boutique</p>
+                <p className="font-semibold text-ink-800">QR Code de votre boutique</p>
                 <p className="mt-1 break-all text-sm text-gray-500">{publicUrl}</p>
               </div>
             </div>
@@ -651,7 +657,7 @@ export default function OnboardingPage({ user, setView }) {
             <div className="mx-auto mb-6 grid h-20 w-20 place-items-center rounded-3xl bg-emerald-50">
               <CheckCircle2 size={40} className="text-emerald-500" />
             </div>
-            <h1 className="font-display text-3xl font-bold text-brand-800">Felicitations !</h1>
+            <h1 className="font-display text-3xl font-bold text-ink-800">Felicitations !</h1>
             <p className="mx-auto mt-3 max-w-lg text-gray-500">Votre boutique digitale est prete. Partagez le lien ou le QR code avec vos clients.</p>
 
             <div className="mx-auto mt-6 flex justify-center">
@@ -660,7 +666,7 @@ export default function OnboardingPage({ user, setView }) {
             <p className="mt-3 break-all text-sm text-gray-500">{publicUrl}</p>
 
             <div className="mx-auto mt-6 grid max-w-sm gap-3">
-              <Button size="lg" onClick={() => window.open(publicUrl, "_blank")}><Globe size={16} /> Voir ma boutique</Button>
+              <Button size="lg" onClick={() => window.open(publicUrl, "_blank", "noopener,noreferrer")}><Globe size={16} /> Voir ma boutique</Button>
               <Button tone="secondary" size="lg" onClick={() => { navigator.clipboard.writeText(publicUrl); toast.success("Lien copie !"); }}><Copy size={16} /> Copier le lien</Button>
               <Button tone="accent" size="lg" onClick={() => setView("products")}><Package size={16} /> Ajouter des produits</Button>
               <Button tone="ghost" onClick={() => setView("dashboard")}>Aller au dashboard</Button>

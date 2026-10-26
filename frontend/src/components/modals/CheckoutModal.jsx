@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle2, Clock, Copy, CreditCard, MessageCircle, Search, Truck } from "lucide-react";
 import Button from "../ui/Button";
 import { createPublicOrder, createWaveCheckoutSession, markPaymentSent } from "../../services/orderService";
 import { fmt } from "../../utils/formatters";
-import { buildOrderWhatsAppMessage } from "../../utils/whatsappMessage";
+import { buildOrderWhatsAppMessage, safeHref, trackWhatsAppClick } from "../../utils/whatsappMessage";
+import { navigate } from "../../utils/navigation";
 
 const statusLabels = {
   PENDING: "En attente",
@@ -37,7 +38,7 @@ function parseOptions(optionsJson) {
 }
 
 function FieldInput({ field, value, onChange }) {
-  const baseClass = "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100";
+  const baseClass = "w-full rounded-lg border border-ink-300 bg-white px-3 py-2 text-ink-800 outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-100";
   const options = parseOptions(field.options_json);
 
   if (field.field_type === "textarea" || field.field_type === "address") {
@@ -60,7 +61,7 @@ function FieldInput({ field, value, onChange }) {
           const current = value ? String(value).split(",").map((item) => item.trim()) : [];
           const checked = current.includes(option);
           return (
-            <label key={option} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm">
+            <label key={option} className="flex items-center gap-2 rounded-lg border border-surface-border px-3 py-2 text-sm">
               <input
                 type="checkbox"
                 checked={checked}
@@ -70,7 +71,7 @@ function FieldInput({ field, value, onChange }) {
                     : current.filter((item) => item !== option);
                   onChange(next.join(", "));
                 }}
-                className="h-4 w-4 accent-emerald-600"
+                className="h-4 w-4 accent-brand-500"
               />
               {option}
             </label>
@@ -115,34 +116,68 @@ export default function CheckoutModal({ business, product, slug, onClose }) {
   const [createdOrder, setCreatedOrder] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [waveError, setWaveError] = useState("");
+  const [waveLoading, setWaveLoading] = useState(false);
   const fields = product.customFields || [];
+
+  useEffect(() => {
+    function onKey(e) { if (e.key === "Escape") onClose(); }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   function updateField(fieldId, value) {
     setFieldValues((current) => ({ ...current, [fieldId]: value }));
   }
 
+  function validateForm() {
+    if (customer.name.trim().length < 2) return "Indiquez votre nom.";
+    if (!/^[0-9+()\s.-]{8,30}$/.test(customer.phone.trim())) return "Numero de telephone invalide.";
+    if (customer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email.trim())) return "Email invalide.";
+    const missing = fields.find((field) => field.is_required && !String(fieldValues[field.id] || "").trim());
+    if (missing) return `${missing.label} est obligatoire.`;
+    return "";
+  }
+
+  // Redirection vers Wave. En cas d'echec, la commande existe deja : on affiche l'erreur
+  // dans le bloc Wave Checkout avec un bouton pour reessayer.
+  async function startWaveCheckout(orderId) {
+    setWaveLoading(true);
+    setWaveError("");
+    try {
+      const checkout = await createWaveCheckoutSession(orderId, { customer_phone: customer.phone.trim() });
+      const url = safeHref(checkout.checkout?.wave_launch_url);
+      if (!url) throw new Error("Lien de paiement Wave invalide.");
+      window.location.href = url;
+    } catch (err) {
+      setWaveError(err.response?.data?.message || err.message || "Paiement Wave indisponible pour le moment.");
+    } finally {
+      setWaveLoading(false);
+    }
+  }
+
   async function submitOrder(event) {
     event.preventDefault();
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     setLoading(true);
     setError("");
     try {
       const data = await createPublicOrder(slug, {
         product_id: product.id,
-        customer_name: customer.name,
-        customer_phone: customer.phone,
-        customer_email: customer.email || null,
+        customer_name: customer.name.trim(),
+        customer_phone: customer.phone.trim(),
+        customer_email: customer.email.trim() || null,
         payment_method: paymentMethod,
         field_values: fieldValues,
       });
       setCreatedOrder(data.order);
-      if (paymentMethod === "wave_checkout") {
-        const checkout = await createWaveCheckoutSession(data.order.id, {
-          customer_phone: customer.phone,
-        });
-        window.location.href = checkout.checkout.wave_launch_url;
-      }
+      if (paymentMethod === "wave_checkout") await startWaveCheckout(data.order.id);
     } catch (err) {
-      setError(err.response?.data?.message || "Creation de commande ou paiement Wave impossible.");
+      setError(err.response?.data?.message || "Creation de la commande impossible.");
     } finally {
       setLoading(false);
     }
@@ -157,7 +192,7 @@ export default function CheckoutModal({ business, product, slug, onClose }) {
     setError("");
     try {
       const data = await markPaymentSent(createdOrder.id, {
-        customer_phone: customer.phone,
+        customer_phone: customer.phone.trim(),
         reference: proof.reference,
         sender_name: proof.sender_name,
         note: proof.note,
@@ -189,13 +224,13 @@ export default function CheckoutModal({ business, product, slug, onClose }) {
   const isPaymentDone = createdOrder?.payment_status === "PAID";
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 p-4" onClick={onClose}>
-      <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white shadow-xl" onClick={(event) => event.stopPropagation()}>
-        <div className="border-b border-slate-200 p-5">
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink-950/60 p-4" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label={`Commander ${product.name}`} className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white shadow-xl" onClick={(event) => event.stopPropagation()}>
+        <div className="border-b border-surface-border p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-emerald-700">Commande</p>
-              <h2 className="mt-1 text-xl font-bold text-slate-900">{product.name}</h2>
+              <h2 className="mt-1 text-xl font-bold text-ink-900">{product.name}</h2>
               <p className="mt-1 font-bold text-emerald-700">{fmt(product.price)} FCFA</p>
             </div>
             <Button tone="ghost" onClick={onClose}>Fermer</Button>
@@ -203,22 +238,22 @@ export default function CheckoutModal({ business, product, slug, onClose }) {
         </div>
 
         {!createdOrder ? (
-          <form onSubmit={submitOrder} className="space-y-5 p-5">
+          <form onSubmit={submitOrder} className="space-y-5 p-5" noValidate>
             <section>
-              <h3 className="mb-3 font-bold text-slate-900">Client</h3>
+              <h3 className="mb-3 font-bold text-ink-900">Client</h3>
               <div className="grid gap-3">
-                <input value={customer.name} onChange={(event) => setCustomer({ ...customer, name: event.target.value })} placeholder="Nom" className="rounded-lg border border-slate-300 px-3 py-2" />
-                <input value={customer.phone} onChange={(event) => setCustomer({ ...customer, phone: event.target.value })} placeholder="Telephone" className="rounded-lg border border-slate-300 px-3 py-2" />
-                <input value={customer.email} onChange={(event) => setCustomer({ ...customer, email: event.target.value })} placeholder="Email optionnel" className="rounded-lg border border-slate-300 px-3 py-2" />
+                <input value={customer.name} onChange={(event) => setCustomer({ ...customer, name: event.target.value })} placeholder="Nom" aria-label="Nom" autoComplete="name" required className="rounded-lg border border-ink-300 px-3 py-2" />
+                <input type="tel" value={customer.phone} onChange={(event) => setCustomer({ ...customer, phone: event.target.value })} placeholder="Telephone (ex. 0700000000)" aria-label="Telephone" autoComplete="tel" required className="rounded-lg border border-ink-300 px-3 py-2" />
+                <input type="email" value={customer.email} onChange={(event) => setCustomer({ ...customer, email: event.target.value })} placeholder="Email optionnel" aria-label="Email (optionnel)" autoComplete="email" className="rounded-lg border border-ink-300 px-3 py-2" />
               </div>
             </section>
 
             {fields.length ? (
               <section>
-                <h3 className="mb-3 font-bold text-slate-900">Details</h3>
+                <h3 className="mb-3 font-bold text-ink-900">Details</h3>
                 <div className="grid gap-3">
                   {fields.map((field) => (
-                    <label key={field.id} className="grid gap-1 text-sm font-semibold text-slate-700">
+                    <label key={field.id} className="grid gap-1 text-sm font-semibold text-ink-700">
                       {field.label} {field.is_required ? <span className="text-rose-600">*</span> : null}
                       <FieldInput field={field} value={fieldValues[field.id] || ""} onChange={(value) => updateField(field.id, value)} />
                     </label>
@@ -228,33 +263,33 @@ export default function CheckoutModal({ business, product, slug, onClose }) {
             ) : null}
 
             <section>
-              <h3 className="mb-3 font-bold text-slate-900">Paiement</h3>
+              <h3 className="mb-3 font-bold text-ink-900">Paiement</h3>
               <div className="grid gap-2">
                 {settings.is_wave_checkout_enabled ? (
                   <label className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3">
                     <span>
-                      <span className="block font-semibold text-slate-900">Payer maintenant avec Wave</span>
-                      <span className="text-xs text-slate-600">Paiement securise, confirmation automatique.</span>
+                      <span className="block font-semibold text-ink-900">Payer maintenant avec Wave</span>
+                      <span className="text-xs text-ink-600">Paiement securise, confirmation automatique.</span>
                     </span>
-                    <input type="radio" checked={paymentMethod === "wave_checkout"} onChange={() => setPaymentMethod("wave_checkout")} className="h-4 w-4 accent-emerald-600" />
+                    <input type="radio" checked={paymentMethod === "wave_checkout"} onChange={() => setPaymentMethod("wave_checkout")} className="h-4 w-4 accent-brand-500" />
                   </label>
                 ) : null}
                 {settings.is_wave_enabled ? (
-                  <label className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-3">
+                  <label className="flex items-center justify-between rounded-lg border border-surface-border px-3 py-3">
                     <span className="font-semibold">Wave manuel</span>
-                    <input type="radio" checked={paymentMethod === "wave"} onChange={() => setPaymentMethod("wave")} className="h-4 w-4 accent-emerald-600" />
+                    <input type="radio" checked={paymentMethod === "wave"} onChange={() => setPaymentMethod("wave")} className="h-4 w-4 accent-brand-500" />
                   </label>
                 ) : null}
                 {settings.is_cod_enabled ? (
-                  <label className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-3">
+                  <label className="flex items-center justify-between rounded-lg border border-surface-border px-3 py-3">
                     <span className="font-semibold">Paiement a la livraison</span>
-                    <input type="radio" checked={paymentMethod === "cod"} onChange={() => setPaymentMethod("cod")} className="h-4 w-4 accent-emerald-600" />
+                    <input type="radio" checked={paymentMethod === "cod"} onChange={() => setPaymentMethod("cod")} className="h-4 w-4 accent-brand-500" />
                   </label>
                 ) : null}
                 {settings.is_whatsapp_enabled !== false ? (
-                  <label className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-3">
+                  <label className="flex items-center justify-between rounded-lg border border-surface-border px-3 py-3">
                     <span className="font-semibold">Contacter sur WhatsApp</span>
-                    <input type="radio" checked={paymentMethod === "whatsapp"} onChange={() => setPaymentMethod("whatsapp")} className="h-4 w-4 accent-emerald-600" />
+                    <input type="radio" checked={paymentMethod === "whatsapp"} onChange={() => setPaymentMethod("whatsapp")} className="h-4 w-4 accent-brand-500" />
                   </label>
                 ) : null}
               </div>
@@ -263,7 +298,7 @@ export default function CheckoutModal({ business, product, slug, onClose }) {
             {error ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
 
             <Button type="submit" className="w-full py-3" disabled={loading}>
-              Creer la commande
+              {loading ? "Envoi de la commande..." : "Creer la commande"}
             </Button>
           </form>
         ) : (
@@ -278,19 +313,19 @@ export default function CheckoutModal({ business, product, slug, onClose }) {
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-200 p-4 text-sm">
-              <div className="grid grid-cols-2 gap-y-2 text-slate-600">
-                <span className="font-semibold text-slate-800">Produit</span>
+            <div className="rounded-lg border border-surface-border p-4 text-sm">
+              <div className="grid grid-cols-2 gap-y-2 text-ink-600">
+                <span className="font-semibold text-ink-800">Produit</span>
                 <span>{createdOrder.product?.name || product.name}</span>
-                <span className="font-semibold text-slate-800">Montant</span>
+                <span className="font-semibold text-ink-800">Montant</span>
                 <span className="font-bold text-emerald-700">{fmt(createdOrder.total_amount)} FCFA</span>
-                <span className="font-semibold text-slate-800">Methode</span>
+                <span className="font-semibold text-ink-800">Methode</span>
                 <span>{paymentLabel}</span>
-                <span className="font-semibold text-slate-800">Paiement</span>
-                <span className={isPaymentDone ? "font-semibold text-emerald-700" : isPaymentVerifying ? "font-semibold text-amber-600" : "text-slate-600"}>
+                <span className="font-semibold text-ink-800">Paiement</span>
+                <span className={isPaymentDone ? "font-semibold text-emerald-700" : isPaymentVerifying ? "font-semibold text-amber-600" : "text-ink-600"}>
                   {paymentStatusLabels[createdOrder.payment_status] || createdOrder.payment_status}
                 </span>
-                <span className="font-semibold text-slate-800">Commande</span>
+                <span className="font-semibold text-ink-800">Commande</span>
                 <span>{statusLabels[createdOrder.status] || createdOrder.status}</span>
               </div>
             </div>
@@ -394,38 +429,39 @@ export default function CheckoutModal({ business, product, slug, onClose }) {
             {createdOrder.payment_method === "wave_checkout" ? (
               <div className="rounded-lg border-2 border-emerald-200 bg-emerald-50 p-4">
                 <p className="flex items-center gap-2 font-bold text-emerald-950"><CreditCard size={18} /> Paiement Wave Checkout</p>
-                <p className="mt-1 text-sm text-emerald-800">Vous allez etre redirige vers Wave pour finaliser le paiement securise.</p>
-                {createdOrder.wave_launch_url ? (
-                  <a href={createdOrder.wave_launch_url}>
-                    <Button className="mt-3 w-full py-3">Payer avec Wave maintenant</Button>
-                  </a>
+                <p className="mt-1 text-sm text-emerald-800">
+                  {waveLoading ? "Redirection vers Wave..." : "Finalisez le paiement securise sur Wave."}
+                </p>
+                {waveError ? <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{waveError}</p> : null}
+                {!isPaymentDone ? (
+                  <Button className="mt-3 w-full py-3" disabled={waveLoading} onClick={() => startWaveCheckout(createdOrder.id)}>
+                    {waveLoading ? "Patientez..." : "Payer avec Wave maintenant"}
+                  </Button>
                 ) : null}
               </div>
             ) : null}
 
             {createdOrder.payment_method === "cod" ? (
-              <div className="rounded-lg border-2 border-slate-200 bg-slate-50 p-4">
-                <p className="flex items-center gap-2 font-bold text-slate-900"><Truck size={18} /> Paiement a la livraison</p>
-                <p className="mt-1 text-sm text-slate-600">Vous payerez <strong>{fmt(createdOrder.total_amount)} FCFA</strong> au livreur quand vous recevrez votre commande.</p>
-                <p className="mt-2 text-sm text-slate-500">Le commercant va confirmer votre commande et organiser la livraison.</p>
+              <div className="rounded-lg border-2 border-surface-border bg-surface p-4">
+                <p className="flex items-center gap-2 font-bold text-ink-900"><Truck size={18} /> Paiement a la livraison</p>
+                <p className="mt-1 text-sm text-ink-600">Vous payerez <strong>{fmt(createdOrder.total_amount)} FCFA</strong> au livreur quand vous recevrez votre commande.</p>
+                <p className="mt-2 text-sm text-ink-500">Le commercant va confirmer votre commande et organiser la livraison.</p>
               </div>
             ) : null}
 
             <div className="space-y-2 pt-2">
               {settings.is_whatsapp_enabled !== false ? (
-                <a href={whatsappLink} target="_blank" rel="noreferrer">
+                <a href={whatsappLink} target="_blank" rel="noreferrer" onClick={() => trackWhatsAppClick({ businessId: business.id, productId: product.id })}>
                   <Button className="w-full">
                     <MessageCircle size={18} />
                     Contacter le commercant sur WhatsApp
                   </Button>
                 </a>
               ) : null}
-              <a href="/suivi-commande">
-                <Button tone="secondary" className="w-full">
-                  <Search size={16} />
-                  Suivre ma commande
-                </Button>
-              </a>
+              <Button tone="secondary" className="w-full" onClick={() => navigate(`/suivi-commande?order=${createdOrder.id}`)}>
+                <Search size={16} />
+                Suivre ma commande
+              </Button>
               <Button tone="ghost" className="w-full" onClick={onClose}>Retour a la boutique</Button>
             </div>
           </div>

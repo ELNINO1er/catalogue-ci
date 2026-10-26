@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, Check, CreditCard, Crown, Loader2, Sparkles, Zap } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Check, CreditCard, Crown, Loader2, Package, ShoppingBag, Sparkles } from "lucide-react";
+import toast from "react-hot-toast";
 import Button from "../../components/ui/Button";
-import Badge from "../../components/ui/Badge";
+import EmptyState from "../../components/ui/EmptyState";
+import Input from "../../components/ui/Input";
 import LoadingSpinner, { PageLoading } from "../../components/ui/LoadingSpinner";
+import { PageHeader, StatusPill } from "../../components/ui/PageKit";
 import { listAvailablePlans, getPlanInfo, requestPlanChange, submitSubscriptionPayment, getPaymentWaveInfo } from "../../services/merchantService";
 import { fmt } from "../../utils/formatters";
-import toast, { Toaster } from "react-hot-toast";
 
 function parsePlanFeatures(plan) {
   if (!plan?.features_json) return [];
@@ -25,6 +27,36 @@ const featureLabels = {
   premium_templates: "Templates premium",
   multi_staff: "Multi-utilisateurs",
 };
+
+function Step({ number, title, children, last }) {
+  return (
+    <li className="relative flex gap-4 pb-6">
+      {!last ? <span className="absolute left-4 top-9 h-[calc(100%-2.25rem)] w-px bg-surface-border" aria-hidden="true" /> : null}
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-500 font-display text-sm font-bold text-white">{number}</span>
+      <div className="min-w-0 flex-1 pt-1">
+        <p className="font-semibold text-ink-900">{title}</p>
+        <div className="mt-1 text-sm text-ink-600">{children}</div>
+      </div>
+    </li>
+  );
+}
+
+function UsageBar({ icon: Icon, label, current, limit }) {
+  const percent = limit ? Math.min(100, Math.round((current / limit) * 100)) : 0;
+  return (
+    <div className="rounded-xl bg-white p-3">
+      <div className="flex items-center justify-between text-sm">
+        <span className="flex items-center gap-1.5 text-ink-500"><Icon size={14} aria-hidden="true" /> {label}</span>
+        <span className="font-semibold text-ink-900">{current} / {limit || "∞"}</span>
+      </div>
+      {limit ? (
+        <div className="mt-2 h-1.5 rounded-full bg-ink-100">
+          <div className={`h-1.5 rounded-full ${percent >= 90 ? "bg-rose-500" : "bg-brand-500"}`} style={{ width: `${percent}%` }} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export default function MerchantPlansPage() {
   const [plans, setPlans] = useState([]);
@@ -92,180 +124,186 @@ export default function MerchantPlansPage() {
 
   if (loading) return <PageLoading message="Chargement des plans..." />;
 
-  // Payment flow modal
+  // Etape de paiement
   if (selectedPlan && pendingPayment && waveInfo) {
     return (
-      <div className="mx-auto max-w-lg space-y-6 p-6">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-brand-800">Paiement du plan {selectedPlan.name}</h1>
-          <p className="mt-1 text-sm text-gray-500">Effectuez le paiement Wave puis entrez la reference.</p>
-        </div>
+      <div className="mx-auto max-w-2xl space-y-6">
+        <PageHeader
+          title={`Paiement du plan ${selectedPlan.name}`}
+          description="Effectuez le paiement Wave puis entrez la reference de la transaction."
+          actions={(
+            <Button tone="secondary" onClick={() => { setSelectedPlan(null); setPendingPayment(null); }}>
+              <ArrowLeft size={16} /> Retour aux plans
+            </Button>
+          )}
+        />
 
-        <div className="card border-2 border-brand-200 bg-brand-50 p-6">
-          <div className="flex items-center gap-3">
-            <div className="grid h-12 w-12 place-items-center rounded-xl bg-brand-500 text-white">
-              <CreditCard size={22} />
-            </div>
+        <section className="card overflow-hidden">
+          <div className="flex items-center gap-4 bg-brand-50 p-5">
+            <span className="grid h-12 w-12 place-items-center rounded-xl bg-brand-500 text-white"><CreditCard size={22} /></span>
             <div>
-              <p className="text-sm text-gray-500">Montant a payer</p>
-              <p className="font-display text-3xl font-bold text-brand-800">{fmt(selectedPlan.price)} FCFA</p>
+              <p className="text-sm text-ink-500">Montant a payer</p>
+              <p className="font-display text-3xl font-bold text-ink-900">{fmt(selectedPlan.price)} <span className="text-base font-semibold text-ink-500">FCFA</span></p>
             </div>
           </div>
-        </div>
 
-        <div className="card p-6">
-          <h3 className="mb-4 font-display text-sm font-bold text-brand-800">Instructions de paiement</h3>
-          <div className="space-y-3 text-sm">
-            <div className="flex items-start gap-3">
-              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-100 text-xs font-bold text-brand-600">1</span>
-              <p className="text-gray-600">Ouvrez votre application <strong>Wave</strong></p>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-100 text-xs font-bold text-brand-600">2</span>
-              <div className="text-gray-600">
-                <p>Envoyez <strong>{fmt(selectedPlan.price)} FCFA</strong> au numero :</p>
-                {waveInfo.wave_number ? (
-                  <p className="mt-1 rounded-lg bg-surface px-3 py-2 font-mono text-lg font-bold text-brand-800">{waveInfo.wave_number}</p>
-                ) : (
-                  <p className="mt-1 text-amber-600">Numero Wave non configure. Contactez l'administrateur.</p>
-                )}
-                {waveInfo.wave_name ? <p className="mt-1 text-xs text-gray-400">Nom : {waveInfo.wave_name}</p> : null}
+          <ol className="p-5 pb-0">
+            <Step number={1} title="Ouvrez votre application Wave">
+              Utilisez le compte Wave avec lequel vous souhaitez payer.
+            </Step>
+            <Step number={2} title={`Envoyez ${fmt(selectedPlan.price)} FCFA`}>
+              {waveInfo.wave_number ? (
+                <p className="mt-1 inline-block rounded-xl bg-surface px-4 py-2 font-mono text-lg font-bold text-ink-900">{waveInfo.wave_number}</p>
+              ) : (
+                <p className="mt-1 text-amber-700">Numero Wave non configure. Contactez l'administrateur.</p>
+              )}
+              {waveInfo.wave_name ? <p className="mt-1 text-xs text-ink-500">Nom du compte : {waveInfo.wave_name}</p> : null}
+              {waveInfo.instructions ? <p className="mt-2 rounded-xl border border-surface-border bg-surface px-3 py-2 text-xs text-ink-500">{waveInfo.instructions}</p> : null}
+            </Step>
+            <Step number={3} title="Entrez la reference de la transaction" last>
+              <div className="mt-2 max-w-md">
+                <Input
+                  label="Reference de transaction Wave"
+                  value={reference}
+                  onChange={(e) => setReference(e.target.value)}
+                  placeholder="Ex: TXN-123456789"
+                />
               </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-100 text-xs font-bold text-brand-600">3</span>
-              <p className="text-gray-600">Entrez la <strong>reference de transaction</strong> ci-dessous</p>
-            </div>
-          </div>
-          {waveInfo.instructions ? <p className="mt-4 rounded-lg border border-surface-border bg-surface px-3 py-2 text-xs text-gray-500">{waveInfo.instructions}</p> : null}
-        </div>
+            </Step>
+          </ol>
 
-        <div className="card p-6">
-          <label className="grid gap-1.5">
-            <span className="text-sm font-semibold text-brand-700">Reference de transaction Wave</span>
-            <input
-              value={reference}
-              onChange={(e) => setReference(e.target.value)}
-              placeholder="Ex: TXN-123456789"
-              className="input-base"
-            />
-          </label>
-          <div className="mt-4 flex gap-3">
-            <Button tone="secondary" className="flex-1" onClick={() => { setSelectedPlan(null); setPendingPayment(null); }}>
+          <div className="flex flex-wrap justify-end gap-3 border-t border-surface-border p-5">
+            <Button tone="secondary" onClick={() => { setSelectedPlan(null); setPendingPayment(null); }}>
               Annuler
             </Button>
-            <Button className="flex-1" onClick={handleSubmitPayment} disabled={submitting}>
+            <Button onClick={handleSubmitPayment} disabled={submitting || !reference.trim()}>
               {submitting ? <LoadingSpinner size="sm" className="text-white" /> : <Check size={16} />}
               J'ai paye
             </Button>
           </div>
-        </div>
-
-        <Toaster position="bottom-center" />
+        </section>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-6 p-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold text-brand-800">Plans et abonnement</h1>
-        <p className="mt-1 text-sm text-gray-500">Choisissez le plan adapte a votre activite.</p>
-      </div>
+  const statusPill = planInfo?.isTrial
+    ? <StatusPill tone="warning">Essai</StatusPill>
+    : planInfo?.isExpired
+      ? <StatusPill tone="danger">Expire</StatusPill>
+      : <StatusPill tone="success">Actif</StatusPill>;
 
-      {/* Current plan status */}
-      {planInfo ? (
-        <div className={`card p-5 ${planInfo.isExpired ? "border-amber-300 bg-amber-50" : planInfo.isTrial ? "border-brand-200 bg-brand-50" : "border-emerald-200 bg-emerald-50"}`}>
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Plans et abonnement" description="Choisissez le plan adapte a votre activite." />
+
+      {/* Mode lancement gratuit : tout est offert, pas de choix de plan */}
+      {planInfo?.freeMode ? (
+        <section className="card flex items-start gap-4 border-emerald-200 bg-emerald-50 p-5">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white text-emerald-600"><Sparkles size={20} /></span>
+          <div>
+            <p className="font-display text-base font-bold text-emerald-900">Lancement gratuit</p>
+            <p className="mt-1 text-sm text-emerald-800">
+              Pendant le lancement, toutes les fonctionnalites sont offertes : produits et commandes illimites.
+              Aucun paiement n'est demande. Nous vous previendrons avant l'arrivee des offres payantes.
+            </p>
+          </div>
+        </section>
+      ) : null}
+
+      {/* Plan actuel */}
+      {planInfo && !planInfo.freeMode ? (
+        <section className={`card p-5 ${planInfo.isExpired ? "border-amber-300 bg-amber-50" : "bg-brand-50"}`}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              {planInfo.isExpired ? <AlertTriangle size={20} className="text-amber-500" /> : <Sparkles size={20} className="text-brand-500" />}
+              <span className="grid h-11 w-11 place-items-center rounded-xl bg-white text-brand-600">
+                {planInfo.isExpired ? <AlertTriangle size={20} className="text-amber-500" /> : <Crown size={20} />}
+              </span>
               <div>
-                <p className="font-semibold text-brand-800">
+                <p className="font-display text-base font-bold text-ink-900">
                   {planInfo.isExpired ? "Abonnement expire" : planInfo.isTrial ? "Periode d'essai" : "Plan actif"}
                   {planInfo.plan ? ` — ${planInfo.plan.name}` : ""}
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-ink-600">
                   {planInfo.isExpired
                     ? "Votre abonnement a expire. Choisissez un plan pour continuer."
                     : planInfo.daysLeft !== null
                       ? `${planInfo.daysLeft} jour${planInfo.daysLeft > 1 ? "s" : ""} restant${planInfo.daysLeft > 1 ? "s" : ""}`
-                      : "Illimite"}
+                      : "Sans date de fin"}
                 </p>
               </div>
             </div>
-            {planInfo.isTrial ? <Badge variant="warning">Essai</Badge> : planInfo.isExpired ? <Badge variant="danger">Expire</Badge> : <Badge variant="success">Actif</Badge>}
+            {statusPill}
           </div>
           {planInfo.limits ? (
-            <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-              <div className="rounded-lg bg-white px-3 py-2">
-                <p className="text-gray-500">Produits</p>
-                <p className="font-bold text-brand-800">{planInfo.limits.products.current} / {planInfo.limits.products.limit || "∞"}</p>
-              </div>
-              <div className="rounded-lg bg-white px-3 py-2">
-                <p className="text-gray-500">Commandes ce mois</p>
-                <p className="font-bold text-brand-800">{planInfo.limits.orders.current} / {planInfo.limits.orders.limit || "∞"}</p>
-              </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <UsageBar icon={Package} label="Produits" current={planInfo.limits.products.current} limit={planInfo.limits.products.limit} />
+              <UsageBar icon={ShoppingBag} label="Commandes ce mois" current={planInfo.limits.orders.current} limit={planInfo.limits.orders.limit} />
             </div>
           ) : null}
-        </div>
+        </section>
       ) : null}
 
-      {/* Plans grid */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {plans.map((plan) => {
-          const isCurrent = planInfo?.plan?.id === plan.id && !planInfo?.isExpired;
-          const features = parsePlanFeatures(plan);
-          return (
-            <div key={plan.id} className={`card relative p-6 ${isCurrent ? "border-2 border-brand-500 shadow-card-hover" : ""}`}>
-              {isCurrent ? <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-500 px-4 py-1 text-xs font-bold text-white">Plan actuel</div> : null}
-              <div className="flex items-center gap-2">
-                <Crown size={18} className={Number(plan.price) > 0 ? "text-accent-500" : "text-gray-400"} />
-                <h3 className="font-display text-lg font-bold text-brand-800">{plan.name}</h3>
-              </div>
-              <div className="mt-3 flex items-baseline gap-1">
-                <span className="font-display text-3xl font-extrabold text-brand-800">
-                  {Number(plan.price) === 0 ? "Gratuit" : fmt(plan.price)}
-                </span>
-                {Number(plan.price) > 0 ? <span className="text-sm text-gray-500">FCFA / mois</span> : null}
-              </div>
-              <ul className="mt-5 space-y-2.5">
-                <li className="flex items-center gap-2 text-sm text-gray-600">
-                  <Check size={14} className="shrink-0 text-brand-500" />
-                  {plan.product_limit ? `${plan.product_limit} produits` : "Produits illimites"}
-                </li>
-                <li className="flex items-center gap-2 text-sm text-gray-600">
-                  <Check size={14} className="shrink-0 text-brand-500" />
-                  {plan.order_limit ? `${plan.order_limit} commandes / mois` : "Commandes illimitees"}
-                </li>
-                {features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-gray-600">
-                    <Check size={14} className="shrink-0 text-brand-500" />
-                    {featureLabels[f] || f}
-                  </li>
-                ))}
-              </ul>
-              <Button
-                tone={isCurrent ? "secondary" : "primary"}
-                size="lg"
-                className="mt-6 w-full"
-                disabled={isCurrent || submitting}
-                onClick={() => handleChoosePlan(plan)}
+      {planInfo?.freeMode ? <h2 className="font-display text-lg font-bold text-ink-900">Offres a venir</h2> : null}
+
+      {plans.length ? (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {plans.map((plan) => {
+            const isCurrent = !planInfo?.freeMode && planInfo?.plan?.id === plan.id && !planInfo?.isExpired;
+            const features = parsePlanFeatures(plan);
+            const paid = Number(plan.price) > 0;
+            return (
+              <article
+                key={plan.id}
+                className={`card relative flex flex-col p-6 ${isCurrent ? "border-2 border-brand-500 shadow-card-hover" : ""}`}
               >
-                {submitting ? <Loader2 size={16} className="animate-spin" /> : null}
-                {isCurrent ? "Plan actuel" : Number(plan.price) === 0 ? "Choisir ce plan" : `Choisir — ${fmt(plan.price)} FCFA`}
-              </Button>
-            </div>
-          );
-        })}
-      </div>
-
-      {!plans.length ? (
-        <div className="card p-8 text-center">
-          <p className="text-sm text-gray-500">Aucun plan disponible pour le moment.</p>
+                {isCurrent ? (
+                  <span className="absolute -top-3 left-6 rounded-full bg-brand-500 px-3 py-1 text-xs font-bold text-white">Plan actuel</span>
+                ) : null}
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-display text-lg font-bold text-ink-900">{plan.name}</h3>
+                  <span className={`grid h-9 w-9 place-items-center rounded-xl ${paid ? "bg-brand-50 text-brand-600" : "bg-ink-100 text-ink-500"}`}>
+                    <Crown size={18} aria-hidden="true" />
+                  </span>
+                </div>
+                <p className="mt-3 flex items-baseline gap-1">
+                  <span className="font-display text-3xl font-extrabold text-ink-900">{paid ? fmt(plan.price) : "Gratuit"}</span>
+                  {paid ? <span className="text-sm text-ink-500">FCFA / mois</span> : null}
+                </p>
+                <ul className="mt-5 space-y-2.5 border-t border-surface-border pt-5">
+                  <li className="flex items-center gap-2 text-sm text-ink-700">
+                    <Check size={15} className="shrink-0 text-brand-500" aria-hidden="true" />
+                    {plan.product_limit ? `${plan.product_limit} produits` : "Produits illimites"}
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-ink-700">
+                    <Check size={15} className="shrink-0 text-brand-500" aria-hidden="true" />
+                    {plan.order_limit ? `${plan.order_limit} commandes / mois` : "Commandes illimitees"}
+                  </li>
+                  {features.map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-sm text-ink-700">
+                      <Check size={15} className="shrink-0 text-brand-500" aria-hidden="true" />
+                      {featureLabels[f] || f}
+                    </li>
+                  ))}
+                </ul>
+                {planInfo?.freeMode ? null : (
+                  <Button
+                    tone={isCurrent ? "secondary" : "primary"}
+                    size="lg"
+                    className="mt-6 w-full"
+                    disabled={isCurrent || submitting}
+                    onClick={() => handleChoosePlan(plan)}
+                  >
+                    {submitting ? <Loader2 size={16} className="animate-spin" /> : null}
+                    {isCurrent ? "Plan actuel" : paid ? `Choisir — ${fmt(plan.price)} FCFA` : "Choisir ce plan"}
+                  </Button>
+                )}
+              </article>
+            );
+          })}
         </div>
-      ) : null}
-
-      <Toaster position="bottom-center" />
+      ) : (
+        <EmptyState icon={Crown} title="Aucun plan disponible" description="Aucun plan disponible pour le moment." />
+      )}
     </div>
   );
 }

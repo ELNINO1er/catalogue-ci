@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Camera, Loader2, Trash2, Upload } from "lucide-react";
+import toast from "react-hot-toast";
 import { mediaUrl } from "../../utils/media";
 
 export default function ImageUpload({ label, value, onChange, onUpload, accept = "image/jpeg,image/png,image/webp,image/gif", maxSizeMB = 3, shape = "rect", className = "" }) {
@@ -13,11 +14,11 @@ export default function ImageUpload({ label, value, onChange, onUpload, accept =
   async function handleFile(file) {
     if (!file) return;
     if (file.size > maxSizeMB * 1024 * 1024) {
-      alert(`Le fichier ne doit pas depasser ${maxSizeMB} Mo.`);
+      toast.error(`Le fichier ne doit pas depasser ${maxSizeMB} Mo.`);
       return;
     }
     if (!file.type.startsWith("image/")) {
-      alert("Seules les images sont acceptees.");
+      toast.error("Seules les images sont acceptees.");
       return;
     }
 
@@ -32,7 +33,7 @@ export default function ImageUpload({ label, value, onChange, onUpload, accept =
         reader.readAsDataURL(file);
       }
     } catch {
-      alert("Erreur lors du telechargement.");
+      toast.error("Erreur lors du telechargement.");
     } finally {
       setUploading(false);
     }
@@ -56,7 +57,7 @@ export default function ImageUpload({ label, value, onChange, onUpload, accept =
 
   return (
     <div className={`grid gap-1.5 ${className}`}>
-      {label ? <span className="text-sm font-semibold text-brand-700">{label}</span> : null}
+      {label ? <span className="text-sm font-semibold text-ink-700">{label}</span> : null}
 
       <div
         onClick={() => !uploading && inputRef.current?.click()}
@@ -69,7 +70,7 @@ export default function ImageUpload({ label, value, onChange, onUpload, accept =
           <>
             <img src={preview} alt="" className={`h-full w-full object-cover ${isRound ? "" : "h-40"}`} />
             <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/0 opacity-0 transition-all group-hover:bg-black/40 group-hover:opacity-100">
-              <button className="rounded-full bg-white/90 p-2 text-brand-700 shadow transition hover:bg-white"><Camera size={16} /></button>
+              <button className="rounded-full bg-white/90 p-2 text-ink-700 shadow transition hover:bg-white"><Camera size={16} /></button>
               <button onClick={remove} className="rounded-full bg-white/90 p-2 text-rose-600 shadow transition hover:bg-white"><Trash2 size={16} /></button>
             </div>
           </>
@@ -83,7 +84,7 @@ export default function ImageUpload({ label, value, onChange, onUpload, accept =
                   <Upload size={20} />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-brand-700">
+                  <p className="text-sm font-medium text-ink-700">
                     {isRound ? "Ajouter" : "Cliquez ou glissez une image"}
                   </p>
                   <p className="mt-0.5 text-xs text-gray-400">JPG, PNG, WEBP — max {maxSizeMB} Mo</p>

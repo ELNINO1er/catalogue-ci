@@ -1,9 +1,10 @@
+import { resolveApiBaseUrl } from "../services/api";
+
 export function mediaUrl(path) {
   if (!path) return "";
   if (/^https?:\/\//i.test(path)) return path;
-  const apiBase = import.meta.env.MODE === "lan"
-    ? `http://${window.location.hostname}:4000/api`
-    : import.meta.env.VITE_API_URL || "http://localhost:4000/api";
-  const origin = apiBase.replace(/\/api\/?$/, "");
+  // Seuls les chemins relatifs (uploads) sont completes ; tout autre schema (javascript:, data:...) est ignore.
+  if (/^[a-z][a-z0-9+.-]*:/i.test(path)) return "";
+  const origin = resolveApiBaseUrl().replace(/\/api\/?$/, "");
   return `${origin}${path.startsWith("/") ? path : `/${path}`}`;
 }

@@ -4,7 +4,7 @@ const variants = {
   danger: "bg-rose-50 text-rose-700 border-rose-200",
   info: "bg-blue-50 text-blue-700 border-blue-200",
   neutral: "bg-gray-100 text-gray-600 border-gray-200",
-  brand: "bg-brand-50 text-brand-600 border-brand-200",
+  brand: "bg-brand-50 text-brand-700 border-brand-200",
   accent: "bg-accent-50 text-accent-800 border-accent-200",
   wave: "bg-wave-light text-wave border-blue-200",
   whatsapp: "bg-whatsapp-light text-green-700 border-green-200",

@@ -1,7 +1,7 @@
 import api from "./api";
 
-export async function getSuperAdminDashboard() {
-  const { data } = await api.get("/super-admin/dashboard");
+export async function getSuperAdminDashboard(range = "7d") {
+  const { data } = await api.get("/super-admin/dashboard", { params: { range } });
   return data;
 }
 
@@ -32,6 +32,11 @@ export async function listPlatformPayments() {
 
 export async function createPlatformPayment(payload) {
   const { data } = await api.post("/super-admin/platform-payments", payload);
+  return data;
+}
+
+export async function updatePlatformPayment(id, payload) {
+  const { data } = await api.put(`/super-admin/platform-payments/${id}`, payload);
   return data;
 }
 
@@ -67,5 +72,10 @@ export async function getPlatformSettings() {
 
 export async function savePlatformSettings(payload) {
   const { data } = await api.put("/super-admin/settings", payload);
+  return data;
+}
+
+export async function getAdminNotifications() {
+  const { data } = await api.get("/super-admin/notifications");
   return data;
 }

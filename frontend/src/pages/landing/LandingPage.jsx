@@ -29,7 +29,7 @@ function Navbar({ onLogin, onRegister }) {
           <div className="grid h-9 w-9 place-items-center rounded-xl bg-brand-500">
             <ShoppingBag size={18} className="text-white" />
           </div>
-          <span className="font-display text-lg font-bold text-brand-700">CatalogueCI</span>
+          <span className="font-display text-lg font-bold text-ink-700">CatalogueCI</span>
         </div>
         <div className="hidden items-center gap-6 text-sm font-medium text-gray-600 md:flex">
           <a href="#features" className="hover:text-brand-600">Fonctionnalites</a>
@@ -72,7 +72,7 @@ function Hero({ onRegister, onDemo }) {
                 <div key={item.name} className="flex items-center gap-3 rounded-xl border border-surface-border p-3">
                   <div className="h-10 w-10 shrink-0 rounded-lg bg-surface" />
                   <div className="flex-1">
-                    <p className="text-xs font-semibold text-brand-800">{item.name}</p>
+                    <p className="text-xs font-semibold text-ink-800">{item.name}</p>
                     <p className="text-xs font-bold text-brand-500">{item.price} FCFA</p>
                   </div>
                   <div className="h-7 w-16 rounded-lg bg-brand-500" />
@@ -94,7 +94,7 @@ function Hero({ onRegister, onDemo }) {
           <h1 className="font-display text-4xl font-extrabold leading-tight sm:text-5xl">
             Creez votre <span className="text-accent-400">boutique digitale</span> en quelques minutes
           </h1>
-          <p className="mt-5 text-lg leading-relaxed text-brand-200">
+          <p className="mt-5 text-lg leading-relaxed text-white/80">
             Catalogue en ligne, commandes WhatsApp, paiement Wave, QR code et dashboard — tout ce qu'il faut pour vendre plus, sans complications.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3 md:justify-start">
@@ -105,7 +105,7 @@ function Hero({ onRegister, onDemo }) {
               Voir une demo
             </Button>
           </div>
-          <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-brand-200 md:justify-start">
+          <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-white/80 md:justify-start">
             <span className="flex items-center gap-1.5"><Check size={14} className="text-accent-400" /> Gratuit pour commencer</span>
             <span className="flex items-center gap-1.5"><Check size={14} className="text-accent-400" /> Aucune carte requise</span>
             <span className="flex items-center gap-1.5"><Check size={14} className="text-accent-400" /> Pret en 2 minutes</span>
@@ -132,7 +132,7 @@ function Features() {
       <div className="mx-auto max-w-6xl px-5">
         <div className="text-center">
           <p className="text-sm font-semibold text-brand-500">Fonctionnalites</p>
-          <h2 className="mt-2 font-display text-3xl font-bold text-brand-800">Tout ce qu'il faut pour vendre en ligne</h2>
+          <h2 className="mt-2 font-display text-3xl font-bold text-ink-800">Tout ce qu'il faut pour vendre en ligne</h2>
           <p className="mx-auto mt-3 max-w-xl text-gray-500">Une solution complete conçue pour les petits commerces d'Abidjan et de Cote d'Ivoire.</p>
         </div>
         <div className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
@@ -141,7 +141,7 @@ function Features() {
               <div className="mb-4 inline-flex rounded-xl bg-brand-50 p-3 text-brand-500">
                 <Icon size={24} />
               </div>
-              <h3 className="font-display text-lg font-bold text-brand-800">{title}</h3>
+              <h3 className="font-display text-lg font-bold text-ink-800">{title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-gray-500">{desc}</p>
             </div>
           ))}
@@ -167,7 +167,7 @@ function BusinessTypes() {
       <div className="mx-auto max-w-6xl px-5">
         <div className="text-center">
           <p className="text-sm font-semibold text-brand-500">Pour qui ?</p>
-          <h2 className="mt-2 font-display text-3xl font-bold text-brand-800">Adapte a tous les types de business</h2>
+          <h2 className="mt-2 font-display text-3xl font-bold text-ink-800">Adapte a tous les types de business</h2>
         </div>
         <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           {businessTypes.map(({ icon: Icon, name }) => (
@@ -175,7 +175,7 @@ function BusinessTypes() {
               <div className="grid h-14 w-14 place-items-center rounded-2xl bg-accent-50 text-accent-700">
                 <Icon size={24} />
               </div>
-              <p className="text-sm font-semibold text-brand-700">{name}</p>
+              <p className="text-sm font-semibold text-ink-700">{name}</p>
             </div>
           ))}
         </div>
@@ -198,13 +198,13 @@ function HowItWorks() {
       <div className="mx-auto max-w-6xl px-5">
         <div className="text-center">
           <p className="text-sm font-semibold text-brand-500">Comment ca marche</p>
-          <h2 className="mt-2 font-display text-3xl font-bold text-brand-800">Lancez votre boutique en 4 etapes</h2>
+          <h2 className="mt-2 font-display text-3xl font-bold text-ink-800">Lancez votre boutique en 4 etapes</h2>
         </div>
         <div className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map(({ step, title, desc }) => (
             <div key={step} className="text-center">
               <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-brand-500 font-display text-xl font-bold text-white">{step}</div>
-              <h3 className="font-display text-lg font-bold text-brand-800">{title}</h3>
+              <h3 className="font-display text-lg font-bold text-ink-800">{title}</h3>
               <p className="mt-2 text-sm text-gray-500">{desc}</p>
             </div>
           ))}
@@ -221,7 +221,7 @@ function Pricing() {
       <div className="mx-auto max-w-6xl px-5">
         <div className="text-center">
           <p className="text-sm font-semibold text-brand-500">Tarifs</p>
-          <h2 className="mt-2 font-display text-3xl font-bold text-brand-800">Des plans simples et accessibles</h2>
+          <h2 className="mt-2 font-display text-3xl font-bold text-ink-800">Des plans simples et accessibles</h2>
           <p className="mx-auto mt-3 max-w-xl text-gray-500">Commencez gratuitement, evoluez quand vous le souhaitez.</p>
         </div>
         <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -234,9 +234,9 @@ function Pricing() {
               {plan.popular ? (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-500 px-4 py-1 text-xs font-bold text-white">Populaire</div>
               ) : null}
-              <h3 className="font-display text-xl font-bold text-brand-800">{plan.name}</h3>
+              <h3 className="font-display text-xl font-bold text-ink-800">{plan.name}</h3>
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="font-display text-4xl font-extrabold text-brand-800">{plan.price}</span>
+                <span className="font-display text-4xl font-extrabold text-ink-800">{plan.price}</span>
                 {plan.period ? <span className="text-sm text-gray-500"> FCFA{plan.period}</span> : null}
               </div>
               <ul className="mt-6 space-y-3">
@@ -270,7 +270,7 @@ function Testimonials() {
       <div className="mx-auto max-w-6xl px-5">
         <div className="text-center">
           <p className="text-sm font-semibold text-brand-500">Temoignages</p>
-          <h2 className="mt-2 font-display text-3xl font-bold text-brand-800">Ce que disent nos commercants</h2>
+          <h2 className="mt-2 font-display text-3xl font-bold text-ink-800">Ce que disent nos commercants</h2>
         </div>
         <div className="mt-14 grid gap-6 sm:grid-cols-3">
           {testimonials.map((t) => (
@@ -280,7 +280,7 @@ function Testimonials() {
               </div>
               <p className="text-sm leading-relaxed text-gray-600">"{t.text}"</p>
               <div className="mt-4 border-t border-surface-border pt-4">
-                <p className="font-semibold text-brand-800">{t.name}</p>
+                <p className="font-semibold text-ink-800">{t.name}</p>
                 <p className="text-xs text-gray-400">{t.role}</p>
               </div>
             </div>
@@ -307,13 +307,13 @@ function FAQ() {
       <div className="mx-auto max-w-3xl px-5">
         <div className="text-center">
           <p className="text-sm font-semibold text-brand-500">FAQ</p>
-          <h2 className="mt-2 font-display text-3xl font-bold text-brand-800">Questions frequentes</h2>
+          <h2 className="mt-2 font-display text-3xl font-bold text-ink-800">Questions frequentes</h2>
         </div>
         <div className="mt-12 space-y-3">
           {faqs.map(({ q, a }, i) => (
             <div key={i} className="card overflow-hidden">
               <button onClick={() => setOpen(open === i ? null : i)} className="flex w-full items-center justify-between px-6 py-4 text-left">
-                <span className="pr-4 text-sm font-semibold text-brand-800">{q}</span>
+                <span className="pr-4 text-sm font-semibold text-ink-800">{q}</span>
                 <ChevronDown size={18} className={`shrink-0 text-gray-400 transition-transform ${open === i ? "rotate-180" : ""}`} />
               </button>
               {open === i ? (
@@ -335,7 +335,7 @@ function CTA() {
     <section className="bg-brand-600 py-20 text-white">
       <div className="mx-auto max-w-3xl px-5 text-center">
         <h2 className="font-display text-3xl font-bold sm:text-4xl">Pret a digitaliser votre commerce ?</h2>
-        <p className="mx-auto mt-4 max-w-lg text-lg text-brand-200">Rejoignez des centaines de commercants a Abidjan qui utilisent CatalogueCI pour vendre plus.</p>
+        <p className="mx-auto mt-4 max-w-lg text-lg text-white/80">Rejoignez des centaines de commercants a Abidjan qui utilisent CatalogueCI pour vendre plus.</p>
         <Button tone="accent" size="xl" className="mt-8">
           Creer ma boutique gratuitement <ArrowRight size={18} />
         </Button>
@@ -354,12 +354,12 @@ function Footer() {
             <div className="grid h-8 w-8 place-items-center rounded-lg bg-brand-500">
               <ShoppingBag size={16} className="text-white" />
             </div>
-            <span className="font-display text-lg font-bold text-brand-700">CatalogueCI</span>
+            <span className="font-display text-lg font-bold text-ink-700">CatalogueCI</span>
           </div>
           <p className="mt-3 max-w-xs text-sm text-gray-500">La plateforme digitale pour les petits commerces de Cote d'Ivoire.</p>
         </div>
         <div>
-          <p className="mb-3 text-sm font-semibold text-brand-800">Produit</p>
+          <p className="mb-3 text-sm font-semibold text-ink-800">Produit</p>
           <div className="space-y-2 text-sm text-gray-500">
             <p><a href="#features" className="hover:text-brand-600">Fonctionnalites</a></p>
             <p><a href="#pricing" className="hover:text-brand-600">Tarifs</a></p>
@@ -367,7 +367,7 @@ function Footer() {
           </div>
         </div>
         <div>
-          <p className="mb-3 text-sm font-semibold text-brand-800">Contact</p>
+          <p className="mb-3 text-sm font-semibold text-ink-800">Contact</p>
           <div className="space-y-2 text-sm text-gray-500">
             <p>Abidjan, Cote d'Ivoire</p>
             <p>support@catalogueci.com</p>

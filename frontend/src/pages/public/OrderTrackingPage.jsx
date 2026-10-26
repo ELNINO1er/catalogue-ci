@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, CheckCircle2, Circle, Clock, Package, Search, ShoppingBag, Truck, XCircle } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
@@ -44,19 +44,38 @@ function getStatusIndex(status) {
   return idx === -1 ? 0 : idx;
 }
 
+// Retour de Wave Checkout (ou lien "Suivre ma commande") : /suivi-commande?order=12&phone=...
+function initialForm() {
+  const params = new URLSearchParams(window.location.search);
+  return { order_id: params.get("order") || "", customer_phone: params.get("phone") || "" };
+}
+
 export default function OrderTrackingPage({ onBack }) {
-  const [form, setForm] = useState({ order_id: "", customer_phone: "" });
+  const [form, setForm] = useState(initialForm);
   const [order, setOrder] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const start = initialForm();
+    if (window.location.search) {
+      // Le telephone ne reste pas dans la barre d'adresse (historique, partage du lien).
+      window.history.replaceState(null, "", start.order_id ? `/suivi-commande?order=${encodeURIComponent(start.order_id)}` : "/suivi-commande");
+    }
+    if (start.order_id && start.customer_phone) search(start);
+  }, []);
+
   async function submit(event) {
     event.preventDefault();
+    search(form);
+  }
+
+  async function search(values) {
     setLoading(true);
     setError("");
     setOrder(null);
     try {
-      setOrder(await trackPublicOrder(form));
+      setOrder(await trackPublicOrder(values));
     } catch (err) {
       setError(err.response?.data?.message || "Commande introuvable.");
     } finally {
@@ -77,7 +96,7 @@ export default function OrderTrackingPage({ onBack }) {
         <div className="card p-6">
           <div className="mb-1 flex items-center gap-2">
             <Search size={20} className="text-brand-400" />
-            <h1 className="font-display text-xl font-bold text-brand-800">Suivi de commande</h1>
+            <h1 className="font-display text-xl font-bold text-ink-800">Suivi de commande</h1>
           </div>
           <p className="mb-5 text-sm text-gray-500">Entrez votre numero de commande et le telephone utilise.</p>
 
@@ -113,7 +132,7 @@ export default function OrderTrackingPage({ onBack }) {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm text-gray-500">Commande</p>
-                  <h2 className="font-display text-2xl font-bold text-brand-800">#{order.id}</h2>
+                  <h2 className="font-display text-2xl font-bold text-ink-800">#{order.id}</h2>
                 </div>
                 <Badge variant={isCancelled ? "danger" : order.status === "DELIVERED" ? "success" : "info"} dot>
                   {statusLabels[order.status] || order.status}
@@ -122,7 +141,7 @@ export default function OrderTrackingPage({ onBack }) {
 
               <div className="mt-5 grid grid-cols-2 gap-y-3 text-sm">
                 <span className="font-medium text-gray-500">Produit</span>
-                <span className="text-right font-semibold text-brand-700">{order.product?.name}</span>
+                <span className="text-right font-semibold text-ink-700">{order.product?.name}</span>
                 <span className="font-medium text-gray-500">Montant</span>
                 <span className="text-right text-lg font-bold text-brand-500">{fmt(order.total_amount)} FCFA</span>
                 <span className="font-medium text-gray-500">Paiement</span>
@@ -137,7 +156,7 @@ export default function OrderTrackingPage({ onBack }) {
             {/* Timeline */}
             {!isCancelled ? (
               <div className="card p-6">
-                <h3 className="mb-5 font-display text-sm font-bold text-brand-800">Progression</h3>
+                <h3 className="mb-5 font-display text-sm font-bold text-ink-800">Progression</h3>
                 <div className="space-y-0">
                   {timeline.map((step, i) => {
                     const stepIdx = statusOrder.indexOf(step.key);
@@ -155,7 +174,7 @@ export default function OrderTrackingPage({ onBack }) {
                           {!isLast ? <div className={`w-0.5 flex-1 min-h-[24px] ${done ? "bg-brand-500" : "bg-surface-border"}`} /> : null}
                         </div>
                         <div className={`pb-6 ${isLast ? "pb-0" : ""}`}>
-                          <p className={`text-sm font-semibold ${done ? "text-brand-800" : "text-gray-400"}`}>{step.label}</p>
+                          <p className={`text-sm font-semibold ${done ? "text-ink-800" : "text-gray-400"}`}>{step.label}</p>
                         </div>
                       </div>
                     );

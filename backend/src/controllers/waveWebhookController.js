@@ -1,4 +1,4 @@
-const { Order } = require("../models");
+const { Order, OrderStatusHistory } = require("../models");
 const { verifyWebhookSignature } = require("../services/waveService");
 
 function extractOrderId(event) {
@@ -46,21 +46,42 @@ exports.handle = async (req, res, next) => {
     }
 
     const paymentStatus = normalizeWaveStatus(event);
-    order.payment_method = "wave_checkout";
+
+    // Idempotence : une commande deja payee n'est jamais retrogradee par un evenement
+    // en retard ou rejoue, et un evenement "en attente" ne change rien.
+    if (order.payment_status === "PAID" || paymentStatus === "PENDING") {
+      return res.json({ success: true, message: "Evenement Wave deja pris en compte." });
+    }
+    if (order.payment_method !== "wave_checkout") {
+      return res.status(200).json({ success: true, message: "Commande hors Wave Checkout, evenement ignore." });
+    }
+
+    const oldStatus = order.status;
+    const oldPayment = order.payment_status;
     order.payment_status = paymentStatus;
     order.wave_transaction_id = extractTransactionId(event);
 
     if (paymentStatus === "PAID") {
       order.status = "PAID";
       order.paid_at = new Date();
-    } else if (paymentStatus === "FAILED") {
-      order.status = "CANCELLED";
-    } else if (paymentStatus === "CANCELLED") {
-      order.status = "CANCELLED";
-      order.payment_status = "CANCELLED";
+    } else {
+      // Echec ou abandon du paiement : la commande reste en attente et le client peut reessayer
+      // (une nouvelle session Wave sera creee).
+      order.status = "AWAITING_PAYMENT";
+      order.wave_checkout_session_id = null;
+      order.wave_launch_url = null;
     }
 
     await order.save();
+    await OrderStatusHistory.create({
+      order_id: order.id,
+      old_status: oldStatus,
+      new_status: order.status,
+      old_payment_status: oldPayment,
+      new_payment_status: order.payment_status,
+      actor: "system",
+      note: `Webhook Wave : ${paymentStatus}`,
+    });
     return res.json({ success: true, message: "Webhook Wave traite." });
   } catch (err) {
     next(err);

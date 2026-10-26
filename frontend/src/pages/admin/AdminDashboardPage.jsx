@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { ArrowUpRight, BarChart3, CreditCard, Eye, Package, ShoppingBag, Store, TrendingUp, Users, Wallet } from "lucide-react";
-import Button from "../../components/ui/Button";
-import Badge from "../../components/ui/Badge";
-import StatCard from "../../components/common/StatCard";
+import { ArrowUpRight, ShoppingBag, Store, Users, Wallet } from "lucide-react";
 import { PageLoading } from "../../components/ui/LoadingSpinner";
 import EmptyState from "../../components/ui/EmptyState";
+import {
+  CategoryDonut, InsightsPanel, KpiCard, Panel, RANGE_OPTIONS, RangeTabs, RankingList, StatusGauge, TrendChart,
+} from "../../components/dashboard/DashboardWidgets";
+import { SERIES } from "../../components/dashboard/chartTheme";
 import { getSuperAdminDashboard } from "../../services/superAdminService";
 import { fmt } from "../../utils/formatters";
 
@@ -13,124 +14,110 @@ function formatDate(value) {
   return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
 }
 
-export default function AdminDashboardPage({ setPublicSlug }) {
+function greeting() {
+  const hour = new Date().getHours();
+  return hour < 18 ? "Bonjour" : "Bonsoir";
+}
+
+export default function AdminDashboardPage({ user, setPublicSlug, setView }) {
+  const [range, setRange] = useState("7d");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    getSuperAdminDashboard()
-      .then(setData)
-      .catch(() => setData(null))
+    setLoading(true);
+    getSuperAdminDashboard(range)
+      .then((d) => { setData(d); setError(""); })
+      .catch((err) => setError(err.response?.data?.message || "Impossible de charger le tableau de bord."))
       .finally(() => setLoading(false));
-  }, []);
+  }, [range]);
 
-  if (loading) return <PageLoading />;
+  if (loading && !data) return <PageLoading />;
+  if (error && !data) return <EmptyState title="Erreur" description={error} />;
 
-  const t = data?.totals || {};
+  const t = data.totals || {};
+  const trends = data.trends;
+  const summary = trends.summary;
+  const compareLabel = RANGE_OPTIONS.find((r) => r.value === range)?.compare;
+  const firstName = user?.name?.split(" ")[0] || "";
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="font-display text-2xl font-bold text-brand-800">Tableau de bord</h1>
-        <p className="mt-1 text-sm text-gray-500">Vue d'ensemble de la plateforme CatalogueCI</p>
+    <div className={`space-y-6 transition-opacity ${loading ? "opacity-60" : ""}`}>
+      {/* Salutation + periode */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="font-display text-2xl font-bold text-ink-900">{greeting()}{firstName ? `, ${firstName}` : ""} 👋</h2>
+          <p className="mt-1 text-sm text-ink-500">Voici l'activite de la plateforme CatalogueCI.</p>
+        </div>
+        <RangeTabs value={range} onChange={setRange} />
       </div>
 
-      {/* Alertes */}
-      {data?.alerts?.length ? (
+      {data.alerts?.length ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-800">
-          {data.alerts.map((a, i) => <p key={i}>{a}</p>)}
+          {data.alerts.map((a) => <p key={a}>{a}</p>)}
         </div>
       ) : null}
 
-      {/* Stats principales */}
+      {/* KPI */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={Store} label="Boutiques" value={fmt(t.businesses)} tone="brand" subtitle={`${fmt(t.active_businesses)} actives`} />
-        <StatCard icon={Package} label="Produits" value={fmt(t.products)} tone="info" />
-        <StatCard icon={Users} label="Commercants" value={fmt(t.merchants)} tone="violet" />
-        <StatCard icon={ShoppingBag} label="Commandes" value={fmt(t.orders)} tone="accent" subtitle={`${fmt(t.orders_this_month)} ce mois`} />
+        <KpiCard icon={Wallet} label="Ventes" value={fmt(summary.revenue)} unit="FCFA" change={summary.changes.revenue} compareLabel={compareLabel} spark={trends.series} sparkKey="revenue" />
+        <KpiCard icon={ShoppingBag} label="Commandes" value={fmt(summary.orders)} change={summary.changes.orders} compareLabel={compareLabel} spark={trends.series} sparkKey="orders" sparkColor={SERIES.orders.color} />
+        <KpiCard icon={Users} label="Clients" value={fmt(summary.customers)} change={summary.changes.customers} compareLabel={compareLabel} />
+        <KpiCard icon={Store} label="Boutiques actives" value={`${fmt(t.active_businesses)} / ${fmt(t.businesses)}`} change={undefined} compareLabel={`${fmt(t.merchants)} commercants`} />
       </div>
 
-      {/* Revenue */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="card p-6">
-          <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent-50 text-accent-700">
-              <Wallet size={20} />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Revenus du mois</p>
-              <p className="text-2xl font-bold text-brand-800">{fmt(t.monthly_revenue)} <span className="text-base font-medium text-gray-400">FCFA</span></p>
-            </div>
-          </div>
-        </div>
-        <div className="card p-6">
-          <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-50 text-emerald-600">
-              <TrendingUp size={20} />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Revenus annuels</p>
-              <p className="text-2xl font-bold text-brand-800">{fmt(t.yearly_revenue)} <span className="text-base font-medium text-gray-400">FCFA</span></p>
-            </div>
-          </div>
-        </div>
+      {/* Courbe + repartition */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <TrendChart series={trends.series} peak={trends.peak} />
+        <CategoryDonut title="Commandes par categorie de boutique" categories={trends.categories} />
       </div>
 
-      {/* Tableaux */}
-      <div className="grid gap-6 xl:grid-cols-2">
-        {/* Dernières boutiques */}
-        <div className="card">
-          <div className="flex items-center justify-between border-b border-surface-border px-6 py-4">
-            <h2 className="font-display font-bold text-brand-800">Dernieres boutiques</h2>
-            <Badge variant="brand">{fmt(t.businesses)} total</Badge>
-          </div>
-          {data?.latest_businesses?.length ? (
-            <div className="divide-y divide-surface-border">
-              {data.latest_businesses.map((biz) => (
-                <div key={biz.id} className="flex items-center justify-between gap-3 px-6 py-3.5">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-brand-700">{biz.name}</p>
-                    <p className="text-xs text-gray-400">{formatDate(biz.created_at)}</p>
-                  </div>
-                  <button onClick={() => setPublicSlug(biz.slug)} className="shrink-0 rounded-lg p-1.5 text-gray-400 transition hover:bg-brand-50 hover:text-brand-600">
-                    <ArrowUpRight size={16} />
-                  </button>
+      {/* Classement, statuts, resume */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <RankingList
+          title="Top boutiques"
+          items={trends.ranking}
+          emptyLabel="Aucune commande sur cette periode."
+          onSeeAll={setView ? () => setView("businesses") : undefined}
+        />
+        <StatusGauge statuses={trends.statuses} />
+        <InsightsPanel
+          title="Plateforme"
+          insights={[
+            { label: "Produits en ligne", value: fmt(t.products) },
+            { label: "Panier moyen", value: `${fmt(summary.average_basket)} FCFA` },
+            { label: "Abonnements (mois)", value: `${fmt(t.monthly_revenue)} FCFA` },
+            { label: "Abonnements (annee)", value: `${fmt(t.yearly_revenue)} FCFA` },
+          ]}
+          footer={trends.ranking[0] ? `${trends.ranking[0].name} est la boutique la plus active sur la periode.` : "Partagez la plateforme pour attirer les premiers commercants."}
+        />
+      </div>
+
+      {/* Dernieres boutiques */}
+      <Panel title="Dernieres boutiques inscrites" action={<span className="text-xs text-ink-500">{fmt(t.businesses)} au total</span>}>
+        {data.latest_businesses?.length ? (
+          <div className="divide-y divide-surface-border">
+            {data.latest_businesses.map((biz) => (
+              <div key={biz.id} className="flex items-center justify-between gap-3 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-ink-900">{biz.name}</p>
+                  <p className="text-xs text-ink-500">Inscrite le {formatDate(biz.created_at)}</p>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-6">
-              <EmptyState title="Aucune boutique" description="Les boutiques apparaitront ici." />
-            </div>
-          )}
-        </div>
-
-        {/* Top boutiques par commandes */}
-        <div className="card">
-          <div className="flex items-center justify-between border-b border-surface-border px-6 py-4">
-            <h2 className="font-display font-bold text-brand-800">Top boutiques</h2>
-            <Badge variant="accent">Par commandes</Badge>
+                <button
+                  onClick={() => setPublicSlug(biz.slug)}
+                  aria-label={`Voir la boutique ${biz.name}`}
+                  className="shrink-0 rounded-lg p-2 text-ink-400 transition hover:bg-brand-50 hover:text-brand-600"
+                >
+                  <ArrowUpRight size={16} />
+                </button>
+              </div>
+            ))}
           </div>
-          {data?.top_businesses?.length ? (
-            <div className="divide-y divide-surface-border">
-              {data.top_businesses.map((biz, i) => (
-                <div key={biz.business_id} className="flex items-center gap-4 px-6 py-3.5">
-                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-brand-50 text-xs font-bold text-brand-600">{i + 1}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-brand-700">{biz.business?.name}</p>
-                  </div>
-                  <span className="text-sm font-bold text-brand-800">{fmt(biz.get?.("orders_count") ?? biz.orders_count)}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="p-6">
-              <EmptyState title="Aucune donnee" description="Les statistiques apparaitront ici." />
-            </div>
-          )}
-        </div>
-      </div>
+        ) : (
+          <EmptyState title="Aucune boutique" description="Les boutiques apparaitront ici." />
+        )}
+      </Panel>
     </div>
   );
 }

@@ -12,13 +12,13 @@ export default function ConfirmModal({ title, message, confirmLabel = "Confirmer
   const { icon: Icon, iconColor, bg, ring } = config[tone] || config.info;
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-brand-950/50 p-4 backdrop-blur-sm" onClick={onCancel}>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink-950/50 p-4 backdrop-blur-sm" onClick={onCancel}>
       <div className="w-full max-w-md animate-slide-up rounded-2xl bg-white shadow-modal" onClick={(e) => e.stopPropagation()}>
         <div className="p-6">
           <div className={`mb-4 inline-flex rounded-xl ${bg} ${ring} ring-4 p-3`}>
             <Icon size={24} className={iconColor} />
           </div>
-          <h3 className="text-lg font-bold text-brand-800">{title}</h3>
+          <h3 className="text-lg font-bold text-ink-800">{title}</h3>
           <p className="mt-2 text-sm leading-relaxed text-gray-500">{message}</p>
         </div>
         <div className="flex justify-end gap-3 border-t border-surface-border px-6 py-4">

@@ -16,6 +16,8 @@ const { logActivity } = require("../utils/activityLogger");
 const { truncateText } = require("../utils/validators");
 const { generateUniqueSlug } = require("../utils/slug");
 const { clearWaveConfigCache } = require("../services/waveService");
+const { clearBillingCache } = require("../services/planService");
+const { getDashboardTrends } = require("../services/statsService");
 
 function parseJson(value) {
   if (!value) return null;
@@ -93,7 +95,24 @@ exports.dashboard = async (req, res, next) => {
       latest_orders: latestOrders,
       latest_payments: latestPayments,
       alerts: suspendedBusinesses ? [`${suspendedBusinesses} boutique(s) suspendue(s).`] : [],
+      trends: await getDashboardTrends({ range: req.query.range, categoryBy: "business" }),
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Compteurs de la cloche de l'en-tete : ce que l'admin doit traiter.
+exports.notifications = async (req, res, next) => {
+  try {
+    const [paymentsToCheck, suspended] = await Promise.all([
+      PlatformPayment.count({ where: { status: "PENDING", reference: { [Op.ne]: null } } }),
+      Business.count({ where: { is_active: false } }),
+    ]);
+    const items = [];
+    if (paymentsToCheck) items.push({ key: "payments", view: "platform-payments", label: `${paymentsToCheck} paiement(s) d'abonnement a valider` });
+    if (suspended) items.push({ key: "suspended", view: "businesses", label: `${suspended} boutique(s) suspendue(s)` });
+    res.json({ total: paymentsToCheck, items });
   } catch (err) {
     next(err);
   }
@@ -177,7 +196,10 @@ exports.upsertSubscription = async (req, res, next) => {
 exports.listPlatformPayments = async (req, res, next) => {
   try {
     res.json(await PlatformPayment.findAll({
-      include: [{ model: Business, as: "business", attributes: ["id", "name", "slug"] }],
+      include: [
+        { model: Business, as: "business", attributes: ["id", "name", "slug"] },
+        { model: Plan, as: "plan", attributes: ["id", "name", "price"] },
+      ],
       order: [["created_at", "DESC"]],
     }));
   } catch (err) {
@@ -190,6 +212,7 @@ exports.createPlatformPayment = async (req, res, next) => {
     const payment = await PlatformPayment.create({
       business_id: req.body.business_id,
       subscription_id: req.body.subscription_id || null,
+      plan_id: req.body.plan_id || null,
       amount: Number(req.body.amount || 0),
       method: truncateText(req.body.method || "wave", 50),
       status: req.body.status || "PENDING",
@@ -209,26 +232,48 @@ exports.updatePlatformPayment = async (req, res, next) => {
     if (!payment) return res.status(404).json({ success: false, message: "Paiement introuvable." });
 
     const wasPending = payment.status !== "PAID";
+    if (req.body.status !== undefined && !["PENDING", "PAID", "FAILED", "CANCELLED"].includes(req.body.status)) {
+      return res.status(400).json({ success: false, message: "Statut de paiement invalide." });
+    }
     ["amount", "method", "status", "reference"].forEach((field) => {
       if (req.body[field] !== undefined) payment[field] = req.body[field];
     });
     if (req.body.status === "PAID" && !payment.paid_at) payment.paid_at = new Date();
     await payment.save();
 
-    // If admin confirms payment → activate corresponding subscription
-    if (wasPending && payment.status === "PAID" && payment.subscription_id) {
-      const subscription = await Subscription.findByPk(payment.subscription_id);
-      if (subscription) {
+    // Paiement confirme : on applique le plan demande et on prolonge d'un mois
+    // (a partir de la fin actuelle si l'abonnement payant est encore en cours).
+    if (wasPending && payment.status === "PAID") {
+      let subscription = payment.subscription_id
+        ? await Subscription.findByPk(payment.subscription_id)
+        : await Subscription.findOne({ where: { business_id: payment.business_id }, order: [["created_at", "DESC"]] });
+      const planId = payment.plan_id || subscription?.plan_id;
+
+      if (planId) {
         const now = new Date();
-        const endsAt = new Date(now);
+        const stillRunning = subscription?.status === "ACTIVE" && subscription.plan_id === planId
+          && subscription.ends_at && new Date(subscription.ends_at) > now;
+        const endsAt = new Date(stillRunning ? subscription.ends_at : now);
         endsAt.setMonth(endsAt.getMonth() + 1);
-        subscription.status = "ACTIVE";
-        subscription.starts_at = now;
-        subscription.ends_at = endsAt;
-        await subscription.save();
+
+        if (subscription) {
+          Object.assign(subscription, {
+            plan_id: planId,
+            status: "ACTIVE",
+            starts_at: stillRunning ? subscription.starts_at : now,
+            ends_at: endsAt,
+          });
+          await subscription.save();
+        } else {
+          subscription = await Subscription.create({ business_id: payment.business_id, plan_id: planId, status: "ACTIVE", starts_at: now, ends_at: endsAt });
+        }
+        if (!payment.subscription_id) {
+          payment.subscription_id = subscription.id;
+          await payment.save();
+        }
       }
     }
-    // If admin rejects payment → keep subscription as-is (merchant can retry)
+    // Paiement refuse : l'abonnement reste tel quel (le commercant peut reessayer).
 
     await logActivity(req, { action: "UPDATE_PLATFORM_PAYMENT", module: "platform_payments", business_id: payment.business_id, details: { id: payment.id, status: payment.status } });
     res.json(payment);
@@ -322,6 +367,7 @@ exports.saveSettings = async (req, res, next) => {
       "platform_name", "currency", "country", "support_email", "support_whatsapp", "maintenance_mode",
       "wave_api_key", "wave_signing_secret", "wave_webhook_secret", "wave_currency", "wave_checkout_enabled",
       "platform_wave_number", "platform_wave_name", "platform_payment_instructions",
+      "billing_enabled",
     ];
     let waveChanged = false;
     for (const key of allowed) {
@@ -333,6 +379,7 @@ exports.saveSettings = async (req, res, next) => {
       }
     }
     if (waveChanged) clearWaveConfigCache();
+    if (req.body.billing_enabled !== undefined) clearBillingCache();
     await logActivity(req, { action: "UPDATE_PLATFORM_SETTINGS", module: "settings" });
     exports.getSettings(req, res, next);
   } catch (err) {

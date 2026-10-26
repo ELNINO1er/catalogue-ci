@@ -1,5 +1,5 @@
 const { verifyToken } = require("../utils/jwt");
-const { User } = require("../models");
+const { User, Business } = require("../models");
 
 module.exports = async function auth(req, res, next) {
   try {
@@ -10,9 +10,14 @@ module.exports = async function auth(req, res, next) {
     }
 
     const decoded = verifyToken(token);
-    const user = await User.findByPk(decoded.id);
+    const user = await User.findByPk(decoded.id, {
+      include: [{ model: Business, as: "business", attributes: ["id", "is_active"] }],
+    });
     if (!user || !user.is_active) {
       return res.status(401).json({ success: false, message: "Compte invalide ou desactive." });
+    }
+    if (user.role === "MERCHANT" && user.business && !user.business.is_active) {
+      return res.status(403).json({ success: false, code: "BUSINESS_SUSPENDED", message: "Votre boutique est suspendue. Contactez le support." });
     }
 
     req.user = {

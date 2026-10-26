@@ -23,7 +23,6 @@ import PaymentSettingsPage from "../pages/merchant/PaymentSettingsPage";
 import MerchantMessagesPage from "../pages/merchant/MerchantMessagesPage";
 import MerchantQrPage from "../pages/merchant/MerchantQrPage";
 import MerchantStatsPage from "../pages/merchant/MerchantStatsPage";
-import MerchantSubscriptionPage from "../pages/merchant/MerchantSubscriptionPage";
 import MerchantPlansPage from "../pages/merchant/MerchantPlansPage";
 import OnboardingPage from "../pages/merchant/OnboardingPage";
 import PublicCataloguePage from "../pages/public/PublicCataloguePage";
@@ -59,7 +58,7 @@ export default function AppRoutes({
       if (view === "activity-logs") return <ActivityLogsPage />;
       if (view === "payment-settings") return <PaymentSettingsPage user={user} />;
       if (view === "settings") return <PlatformSettingsPage />;
-      return <AdminDashboardPage setPublicSlug={setPublicSlug} />;
+      return <AdminDashboardPage user={user} setView={setView} setPublicSlug={setPublicSlug} />;
     }
 
     if (view === "onboarding") return null; // rendered full-screen outside layout
@@ -70,8 +69,7 @@ export default function AppRoutes({
     if (view === "messages") return <MerchantMessagesPage />;
     if (view === "qr-code") return <MerchantQrPage setPublicSlug={setPublicSlug} setQrBusiness={setQrBusiness} />;
     if (view === "stats") return <MerchantStatsPage />;
-    if (view === "plans") return <MerchantPlansPage />;
-    if (view === "subscription") return <MerchantSubscriptionPage />;
+    if (view === "plans" || view === "subscription") return <MerchantPlansPage />;
     return (
       <MerchantDashboardPage
         user={user}

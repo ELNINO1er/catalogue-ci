@@ -1,7 +1,7 @@
 import api from "./api";
 
-export async function getMerchantDashboard() {
-  const { data } = await api.get("/merchant/dashboard");
+export async function getMerchantDashboard(range = "7d") {
+  const { data } = await api.get("/merchant/dashboard", { params: { range } });
   return data;
 }
 
@@ -52,5 +52,10 @@ export async function submitSubscriptionPayment(payment_id, reference) {
 
 export async function getPaymentWaveInfo() {
   const { data } = await api.get("/merchant/plans/wave-info");
+  return data;
+}
+
+export async function getMerchantNotifications() {
+  const { data } = await api.get("/merchant/notifications");
   return data;
 }

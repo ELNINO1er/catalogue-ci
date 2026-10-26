@@ -20,7 +20,7 @@ export default function StatCard({ icon: Icon, label, value, tone = "brand", sub
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-sm font-medium text-gray-500">{label}</p>
-          <p className="mt-1 text-2xl font-bold text-brand-800">{value}</p>
+          <p className="mt-1 text-2xl font-bold text-ink-800">{value}</p>
           {subtitle ? <p className="mt-0.5 text-xs text-gray-400">{subtitle}</p> : null}
         </div>
         <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl ${toneClasses[tone] || toneClasses.brand}`}>

@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const slugify = require("slugify");
-const { User, Business, Subscription, Plan } = require("../models");
+const { Op } = require("sequelize");
+const { sequelize, User, Business, Subscription, Plan } = require("../models");
 const { signToken } = require("../utils/jwt");
 const { validatePasswordStrength } = require("../utils/passwordPolicy");
 const { isValidEmail, isValidPhone, truncateText } = require("../utils/validators");
@@ -9,7 +10,7 @@ const { notifyAdminNewMerchant, sendWelcomeEmail } = require("../services/emailS
 exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) {
+    if (typeof email !== "string" || typeof password !== "string" || !email || !password) {
       return res.status(400).json({ message: "Email et mot de passe requis." });
     }
 
@@ -20,6 +21,13 @@ exports.login = async (req, res, next) => {
 
     const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) return res.status(401).json({ message: "Identifiants invalides." });
+
+    if (user.role === "MERCHANT" && user.business_id) {
+      const business = await Business.findByPk(user.business_id, { attributes: ["id", "is_active"] });
+      if (business && !business.is_active) {
+        return res.status(403).json({ code: "BUSINESS_SUSPENDED", message: "Votre boutique est suspendue. Contactez le support." });
+      }
+    }
 
     const token = signToken({ id: user.id, role: user.role });
     return res.json({
@@ -65,7 +73,6 @@ exports.register = async (req, res, next) => {
       return res.status(409).json({ message: "Un compte avec cet email existe deja." });
     }
 
-    // Create business
     let baseSlug = slugify(business_name, { lower: true, strict: true });
     if (!baseSlug) baseSlug = "boutique";
     let slug = baseSlug;
@@ -74,39 +81,48 @@ exports.register = async (req, res, next) => {
       slug = `${baseSlug}-${suffix++}`;
     }
 
-    const business = await Business.create({
-      name: truncateText(business_name, 150),
-      slug,
-      whatsapp_number: whatsapp_number.trim(),
-      description: business_category || null,
-      is_active: true,
-    });
-
-    // Create user
     const password_hash = await bcrypt.hash(password, 12);
-    const user = await User.create({
-      name: truncateText(name, 150),
-      email: email.trim().toLowerCase(),
-      password_hash,
-      role: "MERCHANT",
-      business_id: business.id,
-      is_active: true,
-    });
 
-    // Auto-assign Trial (7 days) — use free plan or first active plan
-    const trialPlan = await Plan.findOne({ where: { is_active: true }, order: [["price", "ASC"]] });
-    if (trialPlan) {
-      const now = new Date();
-      const endsAt = new Date(now);
-      endsAt.setDate(endsAt.getDate() + 7);
-      await Subscription.create({
+    // Boutique + compte + essai crees ensemble : en cas d'erreur, rien n'est conserve.
+    const { business, user } = await sequelize.transaction(async (transaction) => {
+      const business = await Business.create({
+        name: truncateText(business_name, 150),
+        slug,
+        whatsapp_number: truncateText(whatsapp_number, 20),
+        description: business_category ? truncateText(business_category, 2000) : null,
+        is_active: true,
+      }, { transaction });
+
+      const user = await User.create({
+        name: truncateText(name, 150),
+        email: email.trim().toLowerCase(),
+        password_hash,
+        role: "MERCHANT",
         business_id: business.id,
-        plan_id: trialPlan.id,
-        status: "TRIAL",
-        starts_at: now,
-        ends_at: endsAt,
-      });
-    }
+        is_active: true,
+      }, { transaction });
+
+      // Essai de 7 jours sur le premier plan payant ; sans plan payant, plan gratuit sans expiration.
+      // (En mode lancement gratuit, cet abonnement est ignore jusqu'a l'activation de la facturation.)
+      const trialPlan = await Plan.findOne({ where: { is_active: true, price: { [Op.gt]: 0 } }, order: [["price", "ASC"]], transaction })
+        || await Plan.findOne({ where: { is_active: true }, order: [["price", "ASC"]], transaction });
+      if (trialPlan) {
+        const isFree = Number(trialPlan.price) === 0;
+        const now = new Date();
+        const endsAt = new Date(now);
+        if (isFree) endsAt.setFullYear(endsAt.getFullYear() + 10);
+        else endsAt.setDate(endsAt.getDate() + 7);
+        await Subscription.create({
+          business_id: business.id,
+          plan_id: trialPlan.id,
+          status: isFree ? "ACTIVE" : "TRIAL",
+          starts_at: now,
+          ends_at: endsAt,
+        }, { transaction });
+      }
+
+      return { business, user };
+    });
 
     // Send emails (non-blocking)
     notifyAdminNewMerchant({

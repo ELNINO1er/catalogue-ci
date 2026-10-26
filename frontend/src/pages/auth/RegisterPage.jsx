@@ -58,7 +58,7 @@ export default function RegisterPage({ onRegister, onGoLogin }) {
       <div className="hidden w-1/2 flex-col justify-between bg-brand-600 p-12 text-white lg:flex">
         <div className="flex items-center gap-3">
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent-500">
-            <ShoppingBag size={20} className="text-brand-900" />
+            <ShoppingBag size={20} className="text-ink-900" />
           </div>
           <span className="font-display text-xl font-bold">CatalogueCI</span>
         </div>
@@ -68,7 +68,7 @@ export default function RegisterPage({ onRegister, onGoLogin }) {
             Creez votre boutique{" "}
             <span className="text-accent-500">en 2 minutes.</span>
           </h1>
-          <p className="mt-4 text-lg leading-relaxed text-brand-200">
+          <p className="mt-4 text-lg leading-relaxed text-white/80">
             Rejoignez des centaines de commercants a Abidjan qui utilisent CatalogueCI pour vendre plus.
           </p>
           <div className="mt-8 grid gap-3">
@@ -81,7 +81,7 @@ export default function RegisterPage({ onRegister, onGoLogin }) {
           </div>
         </div>
 
-        <p className="text-sm text-brand-300">CatalogueCI &copy; {new Date().getFullYear()}</p>
+        <p className="text-sm text-white/70">CatalogueCI &copy; {new Date().getFullYear()}</p>
       </div>
 
       {/* Right panel — form */}
@@ -91,16 +91,16 @@ export default function RegisterPage({ onRegister, onGoLogin }) {
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-500">
             <ShoppingBag size={20} className="text-white" />
           </div>
-          <span className="font-display text-xl font-bold text-brand-700">CatalogueCI</span>
+          <span className="font-display text-xl font-bold text-ink-700">CatalogueCI</span>
         </div>
 
         <div className="w-full max-w-md">
-          <button onClick={onGoLogin} className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-brand-500 hover:text-brand-700">
+          <button onClick={onGoLogin} className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-brand-500 hover:text-ink-700">
             <ArrowLeft size={14} /> Retour a la connexion
           </button>
 
           <div className="mb-6">
-            <h2 className="font-display text-2xl font-bold text-brand-800">Creer mon compte</h2>
+            <h2 className="font-display text-2xl font-bold text-ink-800">Creer mon compte</h2>
             <p className="mt-1 text-sm text-gray-500">Remplissez le formulaire pour creer votre boutique digitale.</p>
           </div>
 
@@ -127,7 +127,7 @@ export default function RegisterPage({ onRegister, onGoLogin }) {
 
             {/* Password */}
             <div className="grid gap-1.5">
-              <span className="text-sm font-semibold text-brand-700">Mot de passe</span>
+              <span className="text-sm font-semibold text-ink-700">Mot de passe</span>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -141,6 +141,7 @@ export default function RegisterPage({ onRegister, onGoLogin }) {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-brand-600"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -178,7 +179,7 @@ export default function RegisterPage({ onRegister, onGoLogin }) {
                 required
               />
               <div className="grid gap-1.5">
-                <span className="text-sm font-semibold text-brand-700">Type d'activite</span>
+                <span className="text-sm font-semibold text-ink-700">Type d'activite</span>
                 <select
                   value={form.business_category}
                   onChange={(e) => update("business_category", e.target.value)}

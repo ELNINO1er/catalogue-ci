@@ -2,10 +2,9 @@ const { Op, fn, col, literal } = require("sequelize");
 const { OrderTracking, Business, Product, User } = require("../models");
 const { canAccessBusiness } = require("../middleware/ownership");
 
+// req.ip tient compte de "trust proxy" (active en production) : X-Forwarded-For n'est pas falsifiable directement.
 function getClientIp(req) {
-  const forwarded = req.headers["x-forwarded-for"];
-  if (forwarded) return String(forwarded).split(",")[0].trim();
-  return req.socket?.remoteAddress || null;
+  return req.ip || req.socket?.remoteAddress || null;
 }
 
 function isPositiveInteger(value) {

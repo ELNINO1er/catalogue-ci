@@ -6,6 +6,8 @@ const PlatformPayment = sequelize.define(
   {
     business_id: { type: DataTypes.INTEGER, allowNull: false },
     subscription_id: { type: DataTypes.INTEGER, allowNull: true },
+    // Plan demande : applique seulement quand l'admin confirme le paiement
+    plan_id: { type: DataTypes.INTEGER, allowNull: true },
     amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0 },
     method: { type: DataTypes.STRING(50), allowNull: false, defaultValue: "wave" },
     status: {
