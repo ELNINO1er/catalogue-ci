@@ -153,6 +153,60 @@
 }
 @keyframes spinSlow { to { transform: rotate(360deg); } }
 
+/* ───── Connexion / inscription ───── */
+@layer components {
+  /* Champ avec icone : l'icone et le contour passent a l'orange au focus */
+  .auth-field {
+    @apply flex items-center gap-3 rounded-2xl border border-surface-border bg-white px-4 shadow-[0_1px_2px_rgba(17,24,39,0.04)] transition-all duration-200
+      focus-within:border-brand-400 focus-within:shadow-[0_0_0_4px_rgba(247,103,7,0.12)];
+  }
+  .auth-field > svg { @apply shrink-0 text-ink-300 transition-colors duration-200; }
+  .auth-field:focus-within > svg { @apply text-brand-500; }
+  .auth-field input { @apply w-full min-w-0 bg-transparent py-3.5 text-[0.95rem] text-ink-900 outline-none placeholder:text-ink-300; }
+  .shake { animation: shake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+  .panel-in { opacity: 0; animation: panelIn 0.9s cubic-bezier(0.16, 1, 0.3, 1) var(--d, 0ms) forwards; }
+  /* Etape du formulaire d'inscription qui glisse depuis la droite (ou la gauche au retour) */
+  .step-in { animation: stepIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .step-back { animation: stepBack 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
+}
+@keyframes shake {
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+/* Liste deroulante sur mesure (Dropdown) */
+@layer components {
+  .dropdown-list { animation: dropdownIn 0.18s cubic-bezier(0.16, 1, 0.3, 1); }
+}
+@keyframes dropdownIn {
+  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Confettis de la publication de la boutique */
+@layer components {
+  .confetti {
+    position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; opacity: 0;
+    animation: confettiFall 2.8s cubic-bezier(0.25, 0.6, 0.4, 1) forwards;
+  }
+}
+@keyframes confettiFall {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--x, 0), 520px) rotate(var(--r, 360deg)); }
+}
+@keyframes panelIn {
+  from { opacity: 0; transform: translateX(48px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes stepIn {
+  from { opacity: 0; transform: translateX(36px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes stepBack {
+  from { opacity: 0; transform: translateX(-36px); }
+  to { opacity: 1; transform: none; }
+}
+
 @keyframes marquee {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
@@ -179,7 +233,8 @@
   .photo-reveal::after { display: none; }
   .photo-reveal > img { transform: none !important; }
   .marquee-track { animation: none !important; }
-  .seq, .seq-pop, .seq-right, .seq-down { opacity: 1 !important; }
+  .seq, .seq-pop, .seq-right, .seq-down, .panel-in { opacity: 1 !important; }
+  .confetti { display: none; }
   .seq-type::after { display: none; }
   .draw-path { stroke-dashoffset: 0 !important; }
 }

@@ -5,6 +5,7 @@ import { createPublicOrder, createWaveCheckoutSession, markPaymentSent } from ".
 import { fmt } from "../../utils/formatters";
 import { buildOrderWhatsAppMessage, safeHref, trackWhatsAppClick } from "../../utils/whatsappMessage";
 import { navigate } from "../../utils/navigation";
+import Dropdown from "../ui/Dropdown";
 
 const statusLabels = {
   PENDING: "En attente",
@@ -47,10 +48,12 @@ function FieldInput({ field, value, onChange }) {
 
   if (["select", "radio"].includes(field.field_type)) {
     return (
-      <select value={value} onChange={(event) => onChange(event.target.value)} className={baseClass}>
-        <option value="">Choisir</option>
-        {options.map((option) => <option key={option} value={option}>{option}</option>)}
-      </select>
+      <Dropdown
+        value={value}
+        onChange={onChange}
+        ariaLabel={field.label}
+        options={[{ value: "", label: "Choisir" }, ...options.map((option) => ({ value: option, label: option }))]}
+      />
     );
   }
 

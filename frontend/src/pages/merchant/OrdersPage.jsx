@@ -11,6 +11,7 @@ import { listOrdersByBusiness, updateOrderStatus } from "../../services/orderSer
 import { listBusinesses } from "../../services/businessService";
 import { fmt } from "../../utils/formatters";
 import { buildCustomerWhatsAppLink } from "../../utils/whatsappMessage";
+import Dropdown from "../../components/ui/Dropdown";
 
 const statuses = [
   { value: "", label: "Tous les statuts" },
@@ -77,7 +78,6 @@ const GROUPS = {
   cancelled: ["CANCELLED", "REFUNDED"],
 };
 
-const selectClass = "rounded-xl border border-surface-border bg-white px-3 py-2.5 text-sm font-medium text-ink-700 outline-none transition focus:border-brand-300 focus:ring-2 focus:ring-brand-100";
 
 function formatDateTime(value) {
   if (!value) return "";
@@ -191,14 +191,14 @@ export default function OrdersPage({ user }) {
         title="Commandes"
         description="Suivez chaque commande, confirmez les paiements et tenez vos clients informes."
         actions={isAdmin ? (
-          <select
-            aria-label="Boutique"
+          <Dropdown
+            size="sm"
+            ariaLabel="Boutique"
+            className="w-56"
             value={adminBusinessId}
-            onChange={(event) => { setAdminBusinessId(event.target.value); setPage(1); }}
-            className={selectClass}
-          >
-            {businesses.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-          </select>
+            onChange={(next) => { setAdminBusinessId(next); setPage(1); }}
+            options={businesses.map((item) => ({ value: item.id, label: item.name }))}
+          />
         ) : null}
       />
 
@@ -215,9 +215,14 @@ export default function OrdersPage({ user }) {
         right={(
           <>
             <SearchField value={query} onChange={setQuery} placeholder="Client, telephone ou #numero" />
-            <select aria-label="Statut precis" value={status} onChange={(event) => changeStatusFilter(event.target.value)} className={selectClass}>
-              {statuses.map((item) => <option key={item.value || "all"} value={item.value}>{item.label}</option>)}
-            </select>
+            <Dropdown
+              size="sm"
+              ariaLabel="Statut precis"
+              className="w-52"
+              value={status}
+              onChange={changeStatusFilter}
+              options={statuses}
+            />
           </>
         )}
       >

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import Button from "../ui/Button";
+import Dropdown from "../ui/Dropdown";
 import { createCustomField, deleteCustomField, listCustomFields } from "../../services/customFieldService";
 
 const fieldTypes = ["text", "textarea", "number", "phone", "email", "date", "time", "select", "checkbox", "radio", "file", "address"];
@@ -84,13 +85,14 @@ export default function CustomFieldsEditor({ product }) {
             placeholder="Label du champ"
             className="min-w-0 rounded-lg border border-ink-300 px-3 py-2 text-sm outline-none focus:border-brand-400"
           />
-          <select
+          <Dropdown
+            size="sm"
+            ariaLabel="Type de champ"
+            className="min-w-0"
             value={form.field_type}
-            onChange={(event) => setForm({ ...form, field_type: event.target.value, options_json: "" })}
-            className="min-w-0 rounded-lg border border-ink-300 px-3 py-2 text-sm outline-none focus:border-brand-400"
-          >
-            {fieldTypes.map((type) => <option key={type} value={type}>{type}</option>)}
-          </select>
+            onChange={(next) => setForm({ ...form, field_type: next, options_json: "" })}
+            options={fieldTypes.map((type) => ({ value: type, label: type }))}
+          />
         </div>
 
         {needsOptions ? (

@@ -1,4 +1,5 @@
-import { ChevronDown } from "lucide-react";
+import { Children, isValidElement, useId } from "react";
+import Dropdown from "./Dropdown";
 
 export default function Input({ label, error, className = "", ...props }) {
   return (
@@ -20,15 +21,35 @@ export function Textarea({ label, error, className = "", ...props }) {
   );
 }
 
-export function Select({ label, error, children, className = "", ...props }) {
+// Lit les <option> passees en enfants (meme API qu'un <select>) pour la liste sur mesure.
+function readOptions(children) {
+  return Children.toArray(children)
+    .filter((child) => isValidElement(child) && child.type === "option")
+    .map((child) => ({
+      value: child.props.value ?? String(child.props.children ?? ""),
+      label: Children.toArray(child.props.children).join(""),
+      disabled: !!child.props.disabled,
+    }));
+}
+
+// Meme API qu'avant (label, value, onChange(event), <option>…) mais avec la liste Dropdown.
+export function Select({ label, error, children, className = "", value, onChange, disabled, placeholder, "aria-label": ariaLabel }) {
+  const fieldId = useId();
+  const options = readOptions(children);
   return (
-    <label className="grid gap-1.5">
-      {label ? <span className="text-sm font-semibold text-ink-700">{label}</span> : null}
-      <div className="relative">
-        <select className={`input-base appearance-none pr-10 ${className}`} {...props}>{children}</select>
-        <ChevronDown size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-      </div>
+    <div className="grid gap-1.5">
+      {label ? <label htmlFor={fieldId} className="text-sm font-semibold text-ink-700">{label}</label> : null}
+      <Dropdown
+        id={fieldId}
+        value={value}
+        options={options}
+        disabled={disabled}
+        placeholder={placeholder || options.find((o) => o.value === "")?.label}
+        ariaLabel={ariaLabel || label}
+        buttonClassName={`${error ? "!border-rose-400" : ""} ${className}`}
+        onChange={(next) => onChange?.({ target: { value: next } })}
+      />
       {error ? <span className="text-xs text-rose-600">{error}</span> : null}
-    </label>
+    </div>
   );
 }

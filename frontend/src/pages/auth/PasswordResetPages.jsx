@@ -1,29 +1,17 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, CheckCircle2, KeyRound, MailCheck, ShoppingBag } from "lucide-react";
-import Button from "../../components/ui/Button";
-import Input from "../../components/ui/Input";
-import LoadingSpinner from "../../components/ui/LoadingSpinner";
+import { ArrowLeft, CheckCircle2, KeyRound, Lock, Mail, MailCheck } from "lucide-react";
 import { requestPasswordReset, resetPassword } from "../../services/authService";
+import AuthLayout, { AuthError, AuthField, AuthSubmit } from "./AuthLayout";
 
 function AuthShell({ icon: Icon, title, subtitle, children, onBack }) {
   return (
-    <main className="grid min-h-screen place-items-center bg-surface px-4 py-10">
-      <div className="w-full max-w-md">
-        <div className="mb-6 flex items-center justify-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-500 text-white"><ShoppingBag size={20} /></div>
-          <span className="font-display text-xl font-bold text-ink-900">CatalogueCI</span>
-        </div>
-        <div className="card p-7">
-          <div className="mb-5 grid h-12 w-12 place-items-center rounded-2xl bg-brand-50 text-brand-600"><Icon size={22} /></div>
-          <h1 className="font-display text-xl font-bold text-ink-900">{title}</h1>
-          <p className="mt-1 text-sm text-ink-500">{subtitle}</p>
-          <div className="mt-6">{children}</div>
-        </div>
-        <button onClick={onBack} className="mx-auto mt-6 flex items-center gap-1.5 text-sm font-semibold text-ink-500 hover:text-ink-900">
-          <ArrowLeft size={15} /> Retour a la connexion
-        </button>
-      </div>
-    </main>
+    <AuthLayout variant="reset" title={title} subtitle={subtitle}>
+      <div className="seq-pop mb-6 grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-brand-600" style={{ "--d": "300ms" }}><Icon size={24} /></div>
+      {children}
+      <button onClick={onBack} className="seq group mt-8 flex items-center gap-1.5 text-sm font-semibold text-ink-500 transition hover:text-ink-900" style={{ "--d": "650ms" }}>
+        <ArrowLeft size={15} className="transition-transform duration-200 group-hover:-translate-x-1" /> Retour a la connexion
+      </button>
+    </AuthLayout>
   );
 }
 
@@ -50,20 +38,19 @@ export function ForgotPasswordPage({ onBack }) {
   if (sent) {
     return (
       <AuthShell icon={MailCheck} title="Verifiez vos emails" subtitle="Si un compte existe pour cette adresse, vous allez recevoir un lien pour choisir un nouveau mot de passe. Le lien est valable 1 heure." onBack={onBack}>
-        <p className="rounded-xl bg-surface px-4 py-3 text-sm text-ink-600">Pensez a regarder dans les courriers indesirables (spam).</p>
+        <p className="seq rounded-2xl border border-surface-border bg-white px-4 py-3.5 text-sm text-ink-600" style={{ "--d": "400ms" }}>Pensez a regarder dans les courriers indesirables (spam).</p>
       </AuthShell>
     );
   }
 
   return (
     <AuthShell icon={KeyRound} title="Mot de passe oublie" subtitle="Entrez l'email de votre compte. Nous vous enverrons un lien de reinitialisation." onBack={onBack}>
-      <form onSubmit={submit} className="grid gap-4">
-        <Input label="Adresse email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vous@exemple.com" />
-        {error ? <p role="alert" className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
-        <Button type="submit" size="lg" className="w-full" disabled={loading}>
-          {loading ? <LoadingSpinner size="sm" className="text-white" /> : null}
-          {loading ? "Envoi..." : "Recevoir le lien"}
-        </Button>
+      <form onSubmit={submit} className="grid gap-5">
+        <AuthField icon={Mail} label="Adresse email" delay="400ms">
+          <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vous@exemple.com" />
+        </AuthField>
+        <AuthError message={error} />
+        <AuthSubmit loading={loading} loadingText="Envoi..." delay="500ms">Recevoir le lien</AuthSubmit>
       </form>
     </AuthShell>
   );
@@ -109,21 +96,24 @@ export function ResetPasswordPage({ onBack }) {
   if (done) {
     return (
       <AuthShell icon={CheckCircle2} title="Mot de passe modifie" subtitle="Vous pouvez maintenant vous connecter avec votre nouveau mot de passe. Vos autres sessions ont ete fermees." onBack={onBack}>
-        <Button size="lg" className="w-full" onClick={onBack}>Se connecter</Button>
+        <form onSubmit={(e) => { e.preventDefault(); onBack(); }}>
+          <AuthSubmit delay="400ms">Se connecter</AuthSubmit>
+        </form>
       </AuthShell>
     );
   }
 
   return (
     <AuthShell icon={KeyRound} title="Nouveau mot de passe" subtitle="Au moins 8 caracteres, avec une majuscule, une minuscule, un chiffre et un caractere special." onBack={onBack}>
-      <form onSubmit={submit} className="grid gap-4">
-        <Input label="Nouveau mot de passe" type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={!token} />
-        <Input label="Confirmer le mot de passe" type="password" autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} disabled={!token} />
-        {error ? <p role="alert" className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
-        <Button type="submit" size="lg" className="w-full" disabled={loading || !token}>
-          {loading ? <LoadingSpinner size="sm" className="text-white" /> : null}
-          {loading ? "Enregistrement..." : "Enregistrer le mot de passe"}
-        </Button>
+      <form onSubmit={submit} className="grid gap-5">
+        <AuthField icon={Lock} label="Nouveau mot de passe" delay="400ms">
+          <input type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={!token} />
+        </AuthField>
+        <AuthField icon={Lock} label="Confirmer le mot de passe" delay="480ms">
+          <input type="password" autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} disabled={!token} />
+        </AuthField>
+        <AuthError message={error} />
+        <AuthSubmit loading={loading} loadingText="Enregistrement..." disabled={!token} delay="560ms">Enregistrer le mot de passe</AuthSubmit>
       </form>
     </AuthShell>
   );
