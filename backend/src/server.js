@@ -22,7 +22,7 @@ if (process.env.NODE_ENV === "production") {
 
 const app = require("./app");
 const { sequelize } = require("./models");
-
+const { ensureReferenceData, ensureAdminFromEnv } = require("./bootstrap");
 
 const PORT = process.env.PORT || 4000;
 
@@ -94,6 +94,8 @@ async function ensureExtraColumns() {
     console.log("Connexion MySQL reussie.");
     await sequelize.sync(process.env.DB_SYNC_ALTER === "true" ? { alter: true } : {});
     await ensureExtraColumns();
+    await ensureReferenceData();
+    await ensureAdminFromEnv();
     console.log("Modeles synchronises.");
     const server = app.listen(PORT, () => console.log(`API sur http://localhost:${PORT}`));
     server.on("error", (err) => {

@@ -1,33 +1,16 @@
-require("dotenv").config();
+require("dotenv").config({ path: require("path").join(__dirname, "../.env") });
 const bcrypt = require("bcryptjs");
-const slugify = require("slugify");
-const { sequelize, User, Business, Product, Category, PaymentMethod, Plan, PlatformSetting } = require("../src/models");
+const { sequelize, User, Business, Product } = require("../src/models");
+const { ensureReferenceData, ensureAdminFromEnv, findOrCreate } = require("../src/bootstrap");
 
-async function findOrCreate(Model, where, defaults = {}) {
-  const existing = await Model.findOne({ where });
-  if (existing) return { instance: existing, created: false };
-  const instance = await Model.create({ ...where, ...defaults });
-  return { instance, created: true };
-}
-
+// Developpement local : donnees de reference (comme au demarrage du serveur) + boutique de demo.
+// En production, le serveur cree lui-meme les donnees de reference et le super admin : pas de boutique de demo.
 async function seed() {
   console.log("Demarrage du seeding...");
   await sequelize.authenticate();
   await sequelize.sync();
 
-  const categories = {};
-  for (const name of ["Restaurant", "Boutique", "Salon", "Service", "Autre"]) {
-    const slug = slugify(name, { lower: true, strict: true });
-    const { instance } = await findOrCreate(Category, { slug }, { name });
-    categories[name] = instance;
-  }
-
-  const payments = {};
-  for (const name of ["Wave", "Orange Money", "MTN Money", "Moov Money", "Paiement a la livraison"]) {
-    const code = slugify(name, { lower: true, strict: true, replacement: "_" });
-    const { instance } = await findOrCreate(PaymentMethod, { code }, { name, is_active: true });
-    payments[name] = instance;
-  }
+  const { categories, payments } = await ensureReferenceData();
 
   const { instance: business } = await findOrCreate(
     Business,
@@ -66,16 +49,8 @@ async function seed() {
 
   // Admin credentials from .env (SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD)
   const adminEmail = process.env.SEED_ADMIN_EMAIL;
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
-  if (!adminEmail || !adminPassword) {
+  if (await ensureAdminFromEnv() === null) {
     console.warn("SEED_ADMIN_EMAIL et SEED_ADMIN_PASSWORD non definis dans .env — creation admin ignoree.");
-  } else {
-    await findOrCreate(User, { email: adminEmail }, {
-      name: "Super Admin",
-      password_hash: await bcrypt.hash(adminPassword, 12),
-      role: "SUPER_ADMIN",
-      is_active: true,
-    });
   }
 
   // Demo merchant from .env (optional)
@@ -93,31 +68,6 @@ async function seed() {
       merchant.business_id = business.id;
       await merchant.save();
     }
-  }
-
-  // Plans
-  const plansData = [
-    { name: "Starter", price: 0, product_limit: 10, order_limit: 30, features_json: JSON.stringify(["custom_fields"]) },
-    { name: "Pro", price: 5000, product_limit: 50, order_limit: 500, features_json: JSON.stringify(["custom_fields", "advanced_stats", "premium_templates"]) },
-    { name: "Business", price: 15000, product_limit: null, order_limit: null, features_json: JSON.stringify(["custom_fields", "advanced_stats", "premium_templates", "pdf_catalog", "promo_codes", "multi_staff"]) },
-  ];
-  for (const plan of plansData) {
-    await findOrCreate(Plan, { name: plan.name }, { ...plan, is_active: true });
-  }
-
-  // Platform settings for subscription payments
-  const settingsData = [
-    { key: "platform_name", value: "CatalogueCI" },
-    { key: "currency", value: "XOF" },
-    { key: "country", value: "CI" },
-    { key: "platform_wave_number", value: "2250700000000" },
-    { key: "platform_wave_name", value: "CatalogueCI SAS" },
-    // Mode lancement gratuit : passer a "true" depuis les reglages admin pour activer les abonnements payants.
-    { key: "billing_enabled", value: "false" },
-    { key: "platform_payment_instructions", value: "Envoyez le montant exact sur le numero Wave ci-dessus, puis entrez la reference de la transaction." },
-  ];
-  for (const setting of settingsData) {
-    await findOrCreate(PlatformSetting, { key: setting.key }, { value: setting.value });
   }
 
   console.log("Seeding termine.");
